@@ -367,11 +367,13 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
 };
 
 // Expanded Folder View - Photos spread from stack and reassemble on close
-const ExpandedFolder = ({ stack, onClose, onPhotoClick }) => {
+const ExpandedFolder = ({ stack, onClose, onPhotoClick, onMove }) => {
   const photos = stack?.photos || [];
   const [isClosing, setIsClosing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const stackSize = 120;
-  const cellSize = 84;
+  const cellSize = 120;
   const cellGap = 8;
 
   const handleClose = () => {
@@ -390,13 +392,42 @@ const ExpandedFolder = ({ stack, onClose, onPhotoClick }) => {
   const headerSpace = 44;
   const containerWidth = innerGridWidth + containerPadding * 2;
   const containerHeight = innerGridHeight + containerPadding * 2 + headerSpace;
+  const maxContainerHeight = Math.min(containerHeight, 640);
+  const isScrollable = containerHeight > maxContainerHeight;
 
   const baseX = (stack?.x || 0) - (containerWidth - stackSize) / 2;
-  const baseY = (stack?.y || 0) - (containerHeight - stackSize) / 2;
+  const baseY = (stack?.y || 0) - (maxContainerHeight - stackSize) / 2;
   const stackOffsetX = (containerWidth - stackSize) / 2;
-  const stackOffsetY = (containerHeight - stackSize) / 2;
+  const stackOffsetY = (maxContainerHeight - stackSize) / 2;
   const startScale = stackSize / cellSize;
   const stackOrder = photos.slice(0, 4).reverse();
+
+  const handlePointerDown = (e) => {
+    if (isClosing) return;
+    if (e.target.closest(".folder-expanded-close")) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      baseX: stack?.x || 0,
+      baseY: stack?.y || 0,
+    };
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    onMove?.(stack?.id, dragRef.current.baseX + dx, dragRef.current.baseY + dy);
+  };
+
+  const handlePointerUp = (e) => {
+    if (!isDragging) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setIsDragging(false);
+  };
 
   return (
     <motion.div
@@ -406,19 +437,31 @@ const ExpandedFolder = ({ stack, onClose, onPhotoClick }) => {
         left: baseX,
         top: baseY,
         width: containerWidth,
-        height: containerHeight,
+        height: maxContainerHeight,
+        overflowY: isScrollable ? "auto" : "hidden",
+        overflowX: "hidden",
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
       onClick={(e) => e.stopPropagation()}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {/* Minimal header */}
       <div className="folder-expanded-header">
         <span className="folder-expanded-label">{stack?.label}</span>
         <span className="folder-expanded-count">{photos.length}장</span>
-        <button className="folder-expanded-close" onClick={handleClose}>✕</button>
+        <button
+          className="folder-expanded-close"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleClose}
+        >
+          ✕
+        </button>
       </div>
 
       {/* Photo Grid - transparent container */}
@@ -853,6 +896,24 @@ export default function App({ onBack }) {
   const [showOnboarding, setShowOnboarding] = useState(true); // Show onboarding for new users
   const [viewerPhoto, setViewerPhoto] = useState(null); // Photo lightbox
   const stackIdRef = useRef(0);
+  const workspaceRef = useRef(null);
+  const toolbarRef = useRef(null);
+
+  useEffect(() => {
+    const toolbarGap = 10;
+
+    const updateToolbarOffset = () => {
+      if (!workspaceRef.current || !toolbarRef.current) return;
+      const workspaceRect = workspaceRef.current.getBoundingClientRect();
+      const toolbarRect = toolbarRef.current.getBoundingClientRect();
+      const offset = toolbarRect.bottom - workspaceRect.top + toolbarGap;
+      workspaceRef.current.style.setProperty("--toolbar-offset", `${offset}px`);
+    };
+
+    updateToolbarOffset();
+    window.addEventListener("resize", updateToolbarOffset);
+    return () => window.removeEventListener("resize", updateToolbarOffset);
+  }, []);
 
   // Calculate filtered photos for Grid mode (with deduplication)
   const filteredPhotos = useMemo(() => {
@@ -952,6 +1013,12 @@ export default function App({ onBack }) {
     setExpandedStacks(prev => prev.filter(s => s.id !== stackId));
   }, []);
 
+  const handleExpandedMove = useCallback((stackId, nextX, nextY) => {
+    setStacks(prev => prev.map(s => (s.id === stackId ? { ...s, x: nextX, y: nextY } : s)));
+    setIntersectionStacks(prev => prev.map(s => (s.id === stackId ? { ...s, x: nextX, y: nextY } : s)));
+    setExpandedStacks(prev => prev.map(s => (s.id === stackId ? { ...s, x: nextX, y: nextY } : s)));
+  }, []);
+
   const handlePositionChange = useCallback((stackId, newX, newY, isDragging) => {
     setStacks(prev => prev.map(s =>
       s.id === stackId ? { ...s, x: newX, y: newY } : s
@@ -992,7 +1059,7 @@ export default function App({ onBack }) {
         if (commonPhotos.length > 0) {
           setPreviewIntersection({
             id: intersectionId,
-            label: `${draggedStack.label} ∩ ${closestStack.label}`,
+            label: `${draggedStack.label} X ${closestStack.label}`,
             photos: commonPhotos,
             x: (newX + closestStack.x) / 2,
             y: Math.min(newY, closestStack.y) - 180,
@@ -1080,7 +1147,7 @@ export default function App({ onBack }) {
         onItemToggle={handleItemToggle}
       />
 
-      <main className="workspace">
+      <main className="workspace" ref={workspaceRef}>
         {/* Canvas Mode: Stacks */}
         {viewMode === 'canvas' && (
           <AnimatePresence>
@@ -1120,7 +1187,7 @@ export default function App({ onBack }) {
         )}
 
         {/* View Mode Toggle + Arrange Button */}
-        <div className="workspace-toolbar">
+        <div className="workspace-toolbar" ref={toolbarRef}>
           <div className="view-mode-toggle">
             <button
               className={`view-mode-btn ${viewMode === 'grid' ? 'view-mode-btn--active' : ''}`}
@@ -1136,6 +1203,9 @@ export default function App({ onBack }) {
               <Layers size={16} />
               캔버스
             </button>
+          </div>
+          <div className="item-count">
+            {filteredPhotos.length}개의 항목
           </div>
 
           {viewMode === 'canvas' && (
@@ -1175,6 +1245,7 @@ export default function App({ onBack }) {
               stack={stack}
               onClose={() => handleCloseExpanded(stack.id)}
               onPhotoClick={setViewerPhoto}
+              onMove={handleExpandedMove}
             />
           ))}
         </AnimatePresence>
