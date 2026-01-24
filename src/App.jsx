@@ -65,63 +65,52 @@ const getGridClass = (count) => {
   return 'grid-4';
 };
 
-// Expanded Folder View - Popover with backdrop blur
+// Expanded Folder View - Popover only (backdrop handled by parent)
 const ExpandedFolder = ({ stack, onClose }) => {
   const photos = stack?.photos || [];
 
   return (
-    <>
-      {/* Backdrop with subtle blur */}
-      <motion.div
-        className="folder-backdrop-blur"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      />
-
-      {/* Popover */}
-      <motion.div
-        className="folder-popover"
-        style={{
-          position: 'absolute',
-          left: stack?.x || 0,
-          top: stack?.y || 0,
-        }}
-        initial={{ scale: 0.9, opacity: 0, y: -10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0, y: -10 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      >
-        {/* Compact Header with hierarchy */}
-        <div className="folder-popover-header">
-          <div className="folder-popover-title">
-            <span className="folder-popover-name">{stack?.label}</span>
-            <span className="folder-popover-count">{photos.length}장</span>
-          </div>
-          <button className="folder-popover-close" onClick={onClose}>✕</button>
+    <motion.div
+      className="folder-popover"
+      style={{
+        position: 'absolute',
+        left: stack?.x || 0,
+        top: stack?.y || 0,
+      }}
+      initial={{ scale: 0.9, opacity: 0, y: -10 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      exit={{ scale: 0.9, opacity: 0, y: -10 }}
+      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Compact Header with hierarchy */}
+      <div className="folder-popover-header">
+        <div className="folder-popover-title">
+          <span className="folder-popover-name">{stack?.label}</span>
+          <span className="folder-popover-count">{photos.length}장</span>
         </div>
+        <button className="folder-popover-close" onClick={onClose}>✕</button>
+      </div>
 
-        {/* Photo Grid */}
-        <div className="folder-masonry">
-          {photos.map((photo, index) => (
-            <motion.div
-              key={index}
-              className="folder-masonry-item"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 25,
-                delay: index * 0.03
-              }}
-              style={{ backgroundImage: `url(${photo})` }}
-            />
-          ))}
-        </div>
-      </motion.div>
-    </>
+      {/* Photo Grid */}
+      <div className="folder-masonry">
+        {photos.map((photo, index) => (
+          <motion.div
+            key={index}
+            className="folder-masonry-item"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{
+              type: "spring",
+              stiffness: 400,
+              damping: 25,
+              delay: index * 0.03
+            }}
+            style={{ backgroundImage: `url(${photo})` }}
+          />
+        ))}
+      </div>
+    </motion.div>
   );
 };
 
@@ -433,9 +422,9 @@ export default function App({ onBack }) {
   const [stacks, setStacks] = useState([]);
   const [intersectionStacks, setIntersectionStacks] = useState([]);
   const [previewIntersection, setPreviewIntersection] = useState(null);
-  const [magneticStackId, setMagneticStackId] = useState(null);
+  const [magneticStackIds, setMagneticStackIds] = useState([]);
   const [glowingStackIds, setGlowingStackIds] = useState([]);
-  const [expandedStack, setExpandedStack] = useState(null);
+  const [expandedStacks, setExpandedStacks] = useState([]);
   const stackIdRef = useRef(0);
 
   const handleItemToggle = useCallback((itemId, label) => {
@@ -471,7 +460,23 @@ export default function App({ onBack }) {
   }, []);
 
   const handleStackClick = useCallback((stack) => {
-    setExpandedStack(stack);
+    // Toggle: if already expanded, close it; otherwise, add to expanded list
+    setExpandedStacks(prev => {
+      const isExpanded = prev.some(s => s.id === stack.id);
+      if (isExpanded) {
+        return prev.filter(s => s.id !== stack.id);
+      } else {
+        return [...prev, stack];
+      }
+    });
+  }, []);
+
+  const handleCloseAllExpanded = useCallback(() => {
+    setExpandedStacks([]);
+  }, []);
+
+  const handleCloseExpanded = useCallback((stackId) => {
+    setExpandedStacks(prev => prev.filter(s => s.id !== stackId));
   }, []);
 
   const handlePositionChange = useCallback((stackId, newX, newY, isDragging) => {
@@ -500,7 +505,7 @@ export default function App({ onBack }) {
     });
 
     if (closestStack) {
-      setMagneticStackId(closestStack.id);
+      setMagneticStackIds([stackId, closestStack.id]);
 
       const intersectionId = `${draggedStack.categoryId}-${closestStack.categoryId}`;
       const reverseId = `${closestStack.categoryId}-${draggedStack.categoryId}`;
@@ -528,7 +533,7 @@ export default function App({ onBack }) {
         setPreviewIntersection(null);
       }
     } else {
-      setMagneticStackId(null);
+      setMagneticStackIds([]);
       setPreviewIntersection(null);
     }
   }, [stacks, intersectionStacks]);
@@ -545,7 +550,7 @@ export default function App({ onBack }) {
       setIntersectionStacks(prev => [...prev, { ...previewIntersection }]);
     }
 
-    setMagneticStackId(null);
+    setMagneticStackIds([]);
     setPreviewIntersection(null);
   }, [previewIntersection]);
 
@@ -600,7 +605,7 @@ export default function App({ onBack }) {
               onDragEnd={handleDragEnd}
               onDelete={handleDeleteStack}
               onClick={handleStackClick}
-              isMagnetic={magneticStackId === stack.id}
+              isMagnetic={magneticStackIds.includes(stack.id)}
               isGlowing={glowingStackIds.includes(stack.id)}
             />
           ))}
@@ -648,14 +653,24 @@ export default function App({ onBack }) {
           </div>
         )}
 
-        {/* Expanded Folder Popover */}
+        {/* Expanded Folder Popovers */}
         <AnimatePresence>
-          {expandedStack && (
-            <ExpandedFolder
-              stack={expandedStack}
-              onClose={() => setExpandedStack(null)}
+          {expandedStacks.length > 0 && (
+            <motion.div
+              className="folder-backdrop-blur"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleCloseAllExpanded}
             />
           )}
+          {expandedStacks.map(stack => (
+            <ExpandedFolder
+              key={`expanded-${stack.id}`}
+              stack={stack}
+              onClose={() => handleCloseExpanded(stack.id)}
+            />
+          ))}
         </AnimatePresence>
       </main>
 

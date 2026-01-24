@@ -676,11 +676,12 @@ body {
 /* ========================================
    Magnetic & Glow Effects
 ======================================== */
-.photo-stack--magnetic .stack-container {
-  transform: scale(1.06) rotate(-1deg);
+.photo-stack--magnetic .stack-container,
+.photo-stack--dragging.photo-stack--magnetic .stack-container {
+  transform: scale(1.06) rotate(-1deg) !important;
   box-shadow:
-    0 0 0 2px rgba(0, 122, 255, 0.4),
-    0 8px 24px rgba(0, 122, 255, 0.15);
+    0 0 0 3px rgba(0, 122, 255, 0.5),
+    0 8px 24px rgba(0, 122, 255, 0.2) !important;
 }
 
 @keyframes glowPulse {
