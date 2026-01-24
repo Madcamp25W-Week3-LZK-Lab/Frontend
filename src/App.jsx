@@ -439,8 +439,8 @@ export default function App({ onBack }) {
           categoryId: itemId,
           label: label,
           photos: SAMPLE_PHOTOS[itemId] || [],
-          x: 60 + (existingCount % 3) * 180,
-          y: 60 + Math.floor(existingCount / 3) * 220,
+          x: 80 + (existingCount % 4) * 165,
+          y: 80 + Math.floor(existingCount / 4) * 180,
         };
         setStacks(s => [...s, newStack]);
         return [...prev, itemId];
@@ -562,9 +562,9 @@ export default function App({ onBack }) {
 
   // Arrange stacks to grid (like phone icons)
   const handleArrangeStacks = useCallback(() => {
-    const GRID_START_X = 40;
-    const GRID_START_Y = 40;
-    const GRID_GAP_X = 160;
+    const GRID_START_X = 80;
+    const GRID_START_Y = 80;
+    const GRID_GAP_X = 165;
     const GRID_GAP_Y = 180;
     const COLS = 4;
 
@@ -587,7 +587,15 @@ export default function App({ onBack }) {
   const isEmpty = stacks.length === 0 && intersectionStacks.length === 0;
 
   return (
-    <div className="app-layout">
+    <div
+      className={[
+        "app-layout",
+        leftPanelOpen ? "app-layout--left-open" : "",
+        rightPanelOpen ? "app-layout--right-open" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <CategoryPanel
         isOpen={leftPanelOpen}
         onToggle={() => setLeftPanelOpen(!leftPanelOpen)}
