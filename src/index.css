@@ -1137,3 +1137,379 @@ body {
     height: 92px;
   }
 }
+
+/* ========================================
+   Onboarding Overlay
+======================================== */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-overlay--exiting .onboarding-backdrop {
+  backdrop-filter: blur(0px);
+  background: transparent;
+}
+
+.onboarding-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  transition: all 0.6s ease;
+}
+
+.onboarding-panel {
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-radius: 28px;
+  padding: 48px;
+  min-width: 480px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow:
+    0 32px 80px rgba(15, 23, 42, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.onboarding-step {
+  text-align: center;
+}
+
+.onboarding-step h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin-bottom: 8px;
+}
+
+.onboarding-subtitle {
+  font-size: 15px;
+  color: #8e8e93;
+  margin-bottom: 32px;
+}
+
+/* Step 1: Analysis */
+.onboarding-analysis {
+  padding: 40px 0;
+}
+
+.breathing-logo {
+  font-size: 42px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #007aff 0%, #5856d6 50%, #af52de 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 24px;
+}
+
+.analysis-message {
+  font-size: 16px;
+  color: #8e8e93;
+  margin-bottom: 24px;
+  min-height: 24px;
+}
+
+.analysis-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.analysis-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #007aff;
+  animation: dotPulse 1.4s infinite ease-in-out both;
+}
+
+.analysis-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.analysis-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.analysis-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Step 2: People Grid */
+.people-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.face-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.face-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.face-input {
+  width: 100px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.face-input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+  outline: none;
+}
+
+.face-hide {
+  font-size: 11px;
+  color: #8e8e93;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.face-hide:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #ff3b30;
+}
+
+/* Step 3: Interest Bubbles */
+.bubble-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 32px;
+  padding: 0 20px;
+}
+
+.bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid transparent;
+  border-radius: 100px;
+  font-family: inherit;
+  font-weight: 500;
+  color: #1d1d1f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bubble:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.bubble--active {
+  background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+}
+
+.bubble-icon {
+  font-size: 1.1em;
+}
+
+/* Step 4: Complete */
+.onboarding-complete {
+  padding: 40px 0;
+}
+
+.complete-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.onboarding-complete p {
+  font-size: 16px;
+  color: #8e8e93;
+  margin-bottom: 32px;
+}
+
+/* Buttons */
+.onboarding-next,
+.onboarding-start {
+  padding: 14px 36px;
+  background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.onboarding-next:hover,
+.onboarding-start:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 32px rgba(0, 122, 255, 0.4);
+}
+
+/* Step Indicator */
+.onboarding-steps {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.step-dot--active {
+  background: #007aff;
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* ========================================
+   Photo Viewer Lightbox
+======================================== */
+.photo-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.photo-viewer-image {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+}
+
+.photo-viewer-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.photo-viewer-nav:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.photo-viewer-nav--prev {
+  left: 24px;
+}
+
+.photo-viewer-nav--next {
+  right: 24px;
+}
+
+.photo-viewer-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.photo-viewer-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.photo-viewer-counter {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 500;
+}

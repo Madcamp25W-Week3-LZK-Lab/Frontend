@@ -1,20 +1,25 @@
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Send, MessageSquare, LayoutGrid, Layers } from "lucide-react";
 
-// Sample photos data
+// Sample photos data - organized by person and category
 const SAMPLE_PHOTOS = {
-  dog: ["/inputs/KakaoTalk_20260123_134329349.jpg", "/inputs/KakaoTalk_20260123_134351085.jpg"],
-  cat: ["/inputs/KakaoTalk_20260123_134431651.jpg", "/inputs/KakaoTalk_20260123_134500794.jpg"],
-  car: ["/inputs/KakaoTalk_20260123_134517943.jpg"],
-  cake: ["/inputs/KakaoTalk_20260123_134607527.jpg"],
-  friendA: ["/inputs/KakaoTalk_20260123_134329349.jpg", "/inputs/KakaoTalk_20260123_134431651.jpg", "/inputs/KakaoTalk_20260123_134517943.jpg"],
-  friendB: ["/inputs/KakaoTalk_20260123_134351085.jpg", "/inputs/KakaoTalk_20260123_134500794.jpg"],
-  friendC: ["/inputs/KakaoTalk_20260123_134607527.jpg", "/inputs/KakaoTalk_20260123_134626212.jpg"],
-  tokyo: ["/inputs/KakaoTalk_20260123_134329349.jpg", "/inputs/KakaoTalk_20260123_134351085.jpg", "/inputs/KakaoTalk_20260123_134431651.jpg", "/inputs/KakaoTalk_20260123_134500794.jpg"],
-  barcode: ["/inputs/KakaoTalk_20260123_134517943.jpg"],
-  flower: ["/inputs/KakaoTalk_20260123_134607527.jpg", "/inputs/KakaoTalk_20260123_134626212.jpg"],
-  moon: ["/inputs/KakaoTalk_20260123_134659646.jpg"],
+  // 객체
+  goat: ["/inputs/goat-1.png", "/inputs/goat-2.jpg", "/inputs/goat-3.jpg", "/inputs/goat-4.jpg", "/inputs/goat-5.png", "/inputs/goat-6.jpg", "/inputs/goat-7.jpg", "/inputs/goat-8.jpg", "/inputs/goat-9.jpg", "/inputs/goat-10.jpg", "/inputs/goat-11.png", "/inputs/goat-12.jpg"],
+  car: ["/inputs/Wonyoung-3.jpg", "/inputs/V-3.jpg"], // 더미 데이터
+  flower: ["/inputs/Mina-3.jpg", "/inputs/chuu-3.png"], // 더미 데이터
+  food: ["/inputs/Jin-3.jpg", "/inputs/Woobin-3.jpg"], // 더미 데이터
+  coffee: ["/inputs/onew-3.png", "/inputs/seolyoon-3.jpg"], // 더미 데이터
+  // 인물
+  wonyoung: ["/inputs/Wonyoung-1.jpg", "/inputs/Wonyoung-2.jpg", "/inputs/Wonyoung-3.jpg", "/inputs/Wonyoung-4.png", "/inputs/Wonyoung-6.jpg", "/inputs/Wonyoung-7.jpg", "/inputs/Wonyoung-8.png", "/inputs/Wonyoung-9.png", "/inputs/Wonyoung-10.jpg"],
+  v: ["/inputs/V-1.jpeg", "/inputs/V-2.jpg", "/inputs/V-3.jpg", "/inputs/V-4.jpg", "/inputs/V-5.jpg", "/inputs/V-6.jpg", "/inputs/V-7.jpg", "/inputs/V-8.jpg", "/inputs/V-9.jpg", "/inputs/V-10.png"],
+  mina: ["/inputs/Mina-1.jpg", "/inputs/Mina-2.jpeg", "/inputs/Mina-3.jpg", "/inputs/Mina-4.jpg", "/inputs/Mina-5.png", "/inputs/Mina-6.jpeg", "/inputs/Mina-7.jpg"],
+  chuu: ["/inputs/chuu-1.png", "/inputs/chuu-2.png", "/inputs/chuu-3.png", "/inputs/chuu-4.png", "/inputs/chuu-5.png", "/inputs/chuu-6.png", "/inputs/chuu-7.jpg", "/inputs/chuu-8.png", "/inputs/chuu-9.jpg", "/inputs/chuu-10.jpg"],
+  jin: ["/inputs/Jin-1.png", "/inputs/Jin-2.jpeg", "/inputs/Jin-3.jpg", "/inputs/Jin-4.jpg", "/inputs/Jin-5.jpg", "/inputs/Jin-6.jpg", "/inputs/Jin-7.jpeg", "/inputs/Jin-8.jpg", "/inputs/Jin-9.jpeg"],
+  woobin: ["/inputs/Woobin-1.jpeg", "/inputs/Woobin-2.jpg", "/inputs/Woobin-3.jpg", "/inputs/Woobin-4.jpg", "/inputs/Woobin-6.jpg", "/inputs/Woobin-7.jpg", "/inputs/Woobin-8.jpeg", "/inputs/Woobin-9.jpg", "/inputs/Woobin-10.png"],
+  onew: ["/inputs/onew-1.png", "/inputs/onew-2.png", "/inputs/onew-3.png", "/inputs/onew-4.png", "/inputs/onew-5.png", "/inputs/onew-6.png", "/inputs/onew-7.png", "/inputs/onew-8.png", "/inputs/onew-9.png", "/inputs/onew-10.png"],
+  seolyoon: ["/inputs/seolyoon-1.jpg", "/inputs/seolyoon-2.jpg", "/inputs/seolyoon-3.jpg", "/inputs/seolyoon-4.png", "/inputs/seolyoon-5.png", "/inputs/seolyoon-6.jpg", "/inputs/seolyoon-7.jpg", "/inputs/seolyoon-8.jpg"],
+  chovy: ["/inputs/chovy-1.jpg", "/inputs/chovy-2.jpg", "/inputs/chovy-3.jpg", "/inputs/chovy-4.jpg", "/inputs/chovy-5.jpg", "/inputs/chovy-6.jpg", "/inputs/chovy-7.png", "/inputs/chovy-8.jpg", "/inputs/chovy-9.jpg", "/inputs/chovy-10.jpg"],
 };
 
 // Category structure with Lucide icons
@@ -22,34 +27,257 @@ const CATEGORIES = {
   객체: {
     icon: Box,
     items: [
-      { id: "dog", label: "개" },
-      { id: "cat", label: "고양이" },
+      { id: "goat", label: "염소" },
       { id: "car", label: "자동차" },
-      { id: "cake", label: "케이크" },
+      { id: "flower", label: "꽃" },
+      { id: "food", label: "음식" },
+      { id: "coffee", label: "커피" },
     ]
   },
   인물: {
     icon: User,
     items: [
-      { id: "friendA", label: "친구 A" },
-      { id: "friendB", label: "친구 B" },
-      { id: "friendC", label: "친구 C" },
+      { id: "wonyoung", label: "장원영" },
+      { id: "v", label: "뷔" },
+      { id: "mina", label: "미나" },
+      { id: "chuu", label: "츄" },
+      { id: "jin", label: "진" },
+      { id: "woobin", label: "김우빈" },
+      { id: "onew", label: "온유" },
+      { id: "seolyoon", label: "설윤" },
+      { id: "chovy", label: "쵸비" },
     ]
   },
-  장소: {
-    icon: MapPin,
-    items: [
-      { id: "tokyo", label: "도쿄" },
-    ]
-  },
-  "사용자 지정": {
-    icon: Sparkles,
-    items: [
-      { id: "barcode", label: "바코드" },
-      { id: "flower", label: "꽃" },
-      { id: "moon", label: "달" },
-    ]
-  },
+};
+
+// Dummy data for onboarding (VIP faces)
+const DUMMY_FACES = [
+  { id: 1, name: "", photo: "/inputs/Wonyoung-1.jpg" },
+  { id: 2, name: "", photo: "/inputs/V-1.jpeg" },
+  { id: 3, name: "", photo: "/inputs/Mina-1.jpg" },
+  { id: 4, name: "", photo: "/inputs/chuu-1.png" },
+  { id: 5, name: "", photo: "/inputs/Jin-1.png" },
+];
+
+const INTEREST_CATEGORIES = [
+  { id: "wonyoung", label: "장원영", icon: "👩", count: 10 },
+  { id: "v", label: "뷔", icon: "🧑", count: 10 },
+  { id: "mina", label: "미나", icon: "👩", count: 7 },
+  { id: "chuu", label: "츄", icon: "👩", count: 10 },
+  { id: "jin", label: "진", icon: "🧑", count: 9 },
+  { id: "woobin", label: "김우빈", icon: "🧑", count: 10 },
+  { id: "onew", label: "온유", icon: "🧑", count: 10 },
+  { id: "seolyoon", label: "설윤", icon: "👩", count: 8 },
+  { id: "chovy", label: "쵸비", icon: "🧑", count: 10 },
+  { id: "goat", label: "염소", icon: "🐐", count: 12 },
+];
+
+// Onboarding Overlay Component
+const OnboardingOverlay = ({ onComplete }) => {
+  const [step, setStep] = useState(1);
+  const [analysisMessage, setAnalysisMessage] = useState("사진을 분석하는 중...");
+  const [faces, setFaces] = useState(DUMMY_FACES);
+  const [selectedInterests, setSelectedInterests] = useState([]);
+  const [isExiting, setIsExiting] = useState(false);
+
+  // Step 1: Analysis messages rotation
+  useEffect(() => {
+    if (step !== 1) return;
+
+    const messages = [
+      "사진 12,403장을 분석 중입니다...",
+      "인물을 식별하는 중입니다...",
+      "객체를 분류하는 중입니다...",
+      "카테고리를 정리하는 중입니다..."
+    ];
+
+    let index = 0;
+    const messageInterval = setInterval(() => {
+      index = (index + 1) % messages.length;
+      setAnalysisMessage(messages[index]);
+    }, 800);
+
+    const timer = setTimeout(() => {
+      clearInterval(messageInterval);
+      setStep(2);
+    }, 3000);
+
+    return () => {
+      clearInterval(messageInterval);
+      clearTimeout(timer);
+    };
+  }, [step]);
+
+  const handleFaceNameChange = (id, name) => {
+    setFaces(prev => prev.map(f => f.id === id ? { ...f, name } : f));
+  };
+
+  const handleFaceHide = (id) => {
+    setFaces(prev => prev.filter(f => f.id !== id));
+  };
+
+  const handleInterestToggle = (id) => {
+    setSelectedInterests(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleComplete = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onComplete?.();
+    }, 600);
+  };
+
+  return (
+    <motion.div
+      className={`onboarding-overlay ${isExiting ? 'onboarding-overlay--exiting' : ''}`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Blur Backdrop */}
+      <div className="onboarding-backdrop" />
+
+      {/* Glass Panel */}
+      <motion.div
+        className="onboarding-panel"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: isExiting ? 1.1 : 1, opacity: isExiting ? 0 : 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      >
+        {/* Step 1: AI Analysis */}
+        {step === 1 && (
+          <div className="onboarding-step onboarding-analysis">
+            <motion.div
+              className="breathing-logo"
+              animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            >
+              Photo-X
+            </motion.div>
+            <p className="analysis-message">{analysisMessage}</p>
+            <div className="analysis-dots">
+              <span /><span /><span />
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: VIP People */}
+        {step === 2 && (
+          <div className="onboarding-step onboarding-people">
+            <h2>이 사람들은 누구인가요?</h2>
+            <p className="onboarding-subtitle">앨범에 자주 등장하는 인물들입니다</p>
+
+            <div className="people-grid">
+              {faces.map(face => (
+                <motion.div
+                  key={face.id}
+                  className="face-card"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: face.id * 0.1 }}
+                >
+                  <div
+                    className="face-photo"
+                    style={{ backgroundImage: `url(${face.photo})` }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="이름 입력..."
+                    value={face.name}
+                    onChange={(e) => handleFaceNameChange(face.id, e.target.value)}
+                    className="face-input"
+                  />
+                  <button
+                    className="face-hide"
+                    onClick={() => handleFaceHide(face.id)}
+                  >
+                    숨기기
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+
+            <button className="onboarding-next" onClick={() => setStep(3)}>
+              다음
+            </button>
+          </div>
+        )}
+
+        {/* Step 3: Interest Categories */}
+        {step === 3 && (
+          <div className="onboarding-step onboarding-interests">
+            <h2>관심 카테고리를 선택하세요</h2>
+            <p className="onboarding-subtitle">선택한 카테고리가 사이드바에 고정됩니다</p>
+
+            <div className="bubble-cloud">
+              {INTEREST_CATEGORIES.map(cat => (
+                <motion.button
+                  key={cat.id}
+                  className={`bubble ${selectedInterests.includes(cat.id) ? 'bubble--active' : ''}`}
+                  style={{
+                    fontSize: cat.count > 100 ? '16px' : cat.count > 50 ? '14px' : '13px',
+                    padding: cat.count > 100 ? '12px 20px' : '10px 16px'
+                  }}
+                  onClick={() => handleInterestToggle(cat.id)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span className="bubble-icon">{cat.icon}</span>
+                  {cat.label}
+                </motion.button>
+              ))}
+            </div>
+
+            <button className="onboarding-next" onClick={() => setStep(4)}>
+              완료
+            </button>
+          </div>
+        )}
+
+        {/* Step 4: Complete */}
+        {step === 4 && (
+          <motion.div
+            className="onboarding-step onboarding-complete"
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+          >
+            <motion.div
+              className="complete-icon"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            >
+              ✨
+            </motion.div>
+            <h2>설정 완료!</h2>
+            <p>Photo-X가 준비되었습니다</p>
+            <motion.button
+              className="onboarding-start"
+              onClick={handleComplete}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              시작하기
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* Step Indicator */}
+        {step > 1 && step < 4 && (
+          <div className="onboarding-steps">
+            {[2, 3].map(s => (
+              <div
+                key={s}
+                className={`step-dot ${step >= s ? 'step-dot--active' : ''}`}
+              />
+            ))}
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  );
 };
 
 // Get intersection of photo arrays
@@ -63,6 +291,79 @@ const getGridClass = (count) => {
   if (count === 2) return 'grid-2';
   if (count === 3) return 'grid-3';
   return 'grid-4';
+};
+
+// Photo Viewer Lightbox Component
+const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
+  const currentIndex = photos.indexOf(photo);
+
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    if (currentIndex > 0) {
+      onNavigate(photos[currentIndex - 1]);
+    }
+  };
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    if (currentIndex < photos.length - 1) {
+      onNavigate(photos[currentIndex + 1]);
+    }
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft' && currentIndex > 0) onNavigate(photos[currentIndex - 1]);
+      if (e.key === 'ArrowRight' && currentIndex < photos.length - 1) onNavigate(photos[currentIndex + 1]);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, photos, onClose, onNavigate]);
+
+  return (
+    <motion.div
+      className="photo-viewer-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      {/* Navigation - Left */}
+      {currentIndex > 0 && (
+        <button className="photo-viewer-nav photo-viewer-nav--prev" onClick={handlePrev}>
+          ‹
+        </button>
+      )}
+
+      {/* Photo */}
+      <motion.img
+        src={photo}
+        alt=""
+        className="photo-viewer-image"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        onClick={(e) => e.stopPropagation()}
+      />
+
+      {/* Navigation - Right */}
+      {currentIndex < photos.length - 1 && (
+        <button className="photo-viewer-nav photo-viewer-nav--next" onClick={handleNext}>
+          ›
+        </button>
+      )}
+
+      {/* Counter */}
+      <div className="photo-viewer-counter">
+        {currentIndex + 1} / {photos.length}
+      </div>
+
+      {/* Close Button */}
+      <button className="photo-viewer-close" onClick={onClose}>✕</button>
+    </motion.div>
+  );
 };
 
 // Expanded Folder View - Popover only (backdrop handled by parent)
@@ -456,16 +757,22 @@ export default function App({ onBack }) {
   const [glowingStackIds, setGlowingStackIds] = useState([]);
   const [expandedStacks, setExpandedStacks] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'canvas'
+  const [showOnboarding, setShowOnboarding] = useState(true); // Show onboarding for new users
+  const [viewerPhoto, setViewerPhoto] = useState(null); // Photo lightbox
   const stackIdRef = useRef(0);
 
-  // Calculate filtered photos for Grid mode
+  // Calculate filtered photos for Grid mode (with deduplication)
   const filteredPhotos = useMemo(() => {
+    let photos;
     if (checkedItems.length === 0) {
       // Show all photos if nothing selected
-      return Object.values(SAMPLE_PHOTOS).flat();
+      photos = Object.values(SAMPLE_PHOTOS).flat();
+    } else {
+      // Show only photos from selected categories
+      photos = checkedItems.flatMap(itemId => SAMPLE_PHOTOS[itemId] || []);
     }
-    // Show only photos from selected categories
-    return checkedItems.flatMap(itemId => SAMPLE_PHOTOS[itemId] || []);
+    // Remove duplicates using Set
+    return [...new Set(photos)];
   }, [checkedItems]);
 
   // Handle item toggle differently based on view mode
@@ -751,7 +1058,7 @@ export default function App({ onBack }) {
 
         {/* Grid Mode: Photo Gallery */}
         {viewMode === 'grid' && (
-          <PhotoGrid photos={filteredPhotos} />
+          <PhotoGrid photos={filteredPhotos} onPhotoClick={setViewerPhoto} />
         )}
 
         {/* Canvas Mode: Empty State */}
@@ -790,6 +1097,25 @@ export default function App({ onBack }) {
         isOpen={rightPanelOpen}
         onToggle={() => setRightPanelOpen(!rightPanelOpen)}
       />
+
+      {/* Photo Viewer Lightbox */}
+      <AnimatePresence>
+        {viewerPhoto && (
+          <PhotoViewer
+            photo={viewerPhoto}
+            photos={filteredPhotos}
+            onClose={() => setViewerPhoto(null)}
+            onNavigate={setViewerPhoto}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Onboarding Overlay */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingOverlay onComplete={() => setShowOnboarding(false)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
