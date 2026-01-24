@@ -25,11 +25,10 @@ body {
    App Layout
 ======================================== */
 .app-layout {
-  display: flex;
+  position: relative;
   height: 100vh;
   background: #f5f5f7;
   padding: 20px;
-  gap: 20px;
 }
 
 /* ========================================
@@ -37,12 +36,15 @@ body {
 ======================================== */
 .category-panel,
 .chat-panel {
-  position: relative;
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
   color: #1d1d1f;
   display: flex;
   flex-direction: column;
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   overflow: visible;
+  z-index: 80;
 }
 
 .category-panel,
@@ -52,9 +54,17 @@ body {
   background: transparent;
 }
 
+.category-panel {
+  left: 20px;
+}
+
+.chat-panel {
+  right: 20px;
+}
+
 .category-panel--open,
 .chat-panel--open {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.64);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border-radius: 20px;
@@ -78,7 +88,7 @@ body {
 .panel-toggle {
   width: 44px;
   height: 44px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(0, 0, 0, 0.06);
   color: #636366;
@@ -107,14 +117,12 @@ body {
 
 .category-panel .panel-toggle,
 .chat-panel .panel-toggle {
-  position: relative;
-  margin: auto;
+  position: absolute;
+  top: 16px;
 }
 
 .category-panel--open .panel-toggle,
 .chat-panel--open .panel-toggle {
-  position: absolute;
-  top: 16px;
   margin: 0;
 }
 
@@ -124,6 +132,14 @@ body {
 
 .chat-panel--open .panel-toggle {
   left: 16px;
+}
+
+.category-panel:not(.category-panel--open) .panel-toggle {
+  left: 0;
+}
+
+.chat-panel:not(.chat-panel--open) .panel-toggle {
+  right: 0;
 }
 
 .panel-content {
@@ -146,6 +162,7 @@ body {
   padding: 20px 16px 12px;
   flex-shrink: 0;
 }
+
 
 .panel-header {
   font-size: 17px;
@@ -468,6 +485,7 @@ body {
   overflow: hidden;
   border-radius: 24px;
   border: 1px solid rgba(0, 0, 0, 0.05);
+  height: 100%;
 }
 
 .workspace-empty {
@@ -842,7 +860,7 @@ body {
 .arrange-button {
   position: absolute;
   top: 16px;
-  right: 16px;
+  left: 50%;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -859,19 +877,20 @@ body {
   color: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  z-index: 50;
+  z-index: 10;
+  transform: translateX(-50%);
 }
 
 .arrange-button:hover {
   background: #0066d6;
-  transform: translateY(-1px);
+  transform: translateX(-50%) translateY(-1px);
   box-shadow:
     0 4px 8px rgba(0, 122, 255, 0.25),
     0 12px 28px rgba(0, 122, 255, 0.3);
 }
 
 .arrange-button:active {
-  transform: translateY(0);
+  transform: translateX(-50%);
   background: #0055b3;
 }
 
@@ -884,19 +903,69 @@ body {
    Responsive
 ========================================*/
 @media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    height: auto;
+    overflow: auto;
+  }
+
   .app-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
     padding: 12px;
     gap: 12px;
   }
 
   .category-panel--open {
-    width: 220px;
-    min-width: 220px;
+    width: 100%;
+    min-width: 100%;
+    max-height: 42vh;
   }
 
   .chat-panel--open {
-    width: 260px;
-    min-width: 260px;
+    width: 100%;
+    min-width: 100%;
+    max-height: 42vh;
+  }
+
+  .category-panel,
+  .chat-panel {
+    width: 100%;
+    min-width: 100%;
+    position: sticky;
+    top: 0;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    z-index: 30;
+  }
+
+  .panel-toggle {
+    margin: 0 auto;
+  }
+
+  .category-panel--open .panel-toggle,
+  .chat-panel--open .panel-toggle {
+    top: 12px;
+  }
+
+  .category-panel--open .panel-toggle {
+    right: 12px;
+  }
+
+  .chat-panel--open .panel-toggle {
+    left: 12px;
+  }
+
+  .panel-content {
+    padding-top: 10px;
+  }
+
+  .workspace {
+    min-height: 60vh;
+    border-radius: 18px;
   }
 
   .stack-container {
@@ -907,5 +976,33 @@ body {
   .folder-popover {
     min-width: 180px;
     max-width: 220px;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-layout {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .workspace {
+    min-height: 56vh;
+  }
+
+  .panel-header-row {
+    padding: 16px 14px 10px;
+  }
+
+  .panel-search {
+    padding: 0 14px 10px;
+  }
+
+  .chat-input-area {
+    padding: 10px 14px 14px;
+  }
+
+  .stack-container {
+    width: 92px;
+    height: 92px;
   }
 }
