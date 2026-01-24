@@ -1,0 +1,525 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+/* ========================================
+   App Layout - iOS 18 Light Theme
+======================================== */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  background: linear-gradient(180deg, #f5f5f7 0%, #e8e8ed 100%);
+  padding: 16px;
+  gap: 16px;
+}
+
+/* ========================================
+   Side Panels - Rounded Popup Style
+======================================== */
+.category-panel,
+.chat-panel {
+  position: relative;
+  color: #1d1d1f;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
+}
+
+/* Closed state - no background, just toggle button */
+.category-panel {
+  width: 48px;
+  min-width: 48px;
+  background: transparent;
+}
+
+.chat-panel {
+  width: 48px;
+  min-width: 48px;
+  background: transparent;
+}
+
+/* Open state - show panel background */
+.category-panel--open,
+.chat-panel--open {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 24px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.category-panel--open {
+  width: 280px;
+  min-width: 280px;
+}
+
+.chat-panel--open {
+  width: 320px;
+  min-width: 320px;
+}
+
+/* Toggle Buttons - Floating pill style */
+.panel-toggle {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: #8e8e93;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.panel-toggle:hover {
+  background: #fff;
+  color: #007aff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: scale(1.05);
+}
+
+/* Closed panel - button positioning */
+.category-panel .panel-toggle {
+  position: relative;
+  margin: auto;
+}
+
+.chat-panel .panel-toggle {
+  position: relative;
+  margin: auto;
+}
+
+/* Open panel - button inside panel */
+.category-panel--open .panel-toggle,
+.chat-panel--open .panel-toggle {
+  position: absolute;
+  top: 20px;
+  margin: 0;
+}
+
+.category-panel--open .panel-toggle {
+  right: 16px;
+}
+
+.chat-panel--open .panel-toggle {
+  left: 16px;
+}
+
+
+/* Panel Content */
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.panel-header {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #1d1d1f;
+}
+
+/* ========================================
+   Category Panel Content - Compact iOS Style
+======================================== */
+.panel-search input {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(118, 118, 128, 0.08);
+  border: none;
+  border-radius: 8px;
+  color: #1d1d1f;
+  font-size: 13px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.panel-search input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+  outline: none;
+}
+
+.panel-search input::placeholder {
+  color: #8e8e93;
+}
+
+.category-group {
+  margin-bottom: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.category-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 8px 12px 4px;
+  color: #8e8e93;
+  background: transparent;
+}
+
+.category-list {
+  list-style: none;
+}
+
+.category-item {
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+}
+
+.category-item:last-child {
+  border-bottom: none;
+}
+
+.category-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #1d1d1f;
+  padding: 8px 12px;
+  transition: background 0.15s ease;
+}
+
+.category-item label:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.category-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #007aff;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.add-category-btn {
+  width: 100%;
+  padding: 10px;
+  background: rgba(0, 122, 255, 0.06);
+  border: none;
+  border-radius: 10px;
+  color: #007aff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.2s ease;
+}
+
+.add-category-btn:hover {
+  background: rgba(0, 122, 255, 0.12);
+}
+
+/* ========================================
+   Chat Panel Content - iOS Style
+======================================== */
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.chat-empty {
+  color: #8e8e93;
+  font-size: 15px;
+  text-align: center;
+  padding: 40px 20px;
+  line-height: 1.6;
+}
+
+.chat-message {
+  margin-bottom: 12px;
+  padding: 14px 18px;
+  border-radius: 20px;
+  font-size: 15px;
+  line-height: 1.5;
+  max-width: 85%;
+}
+
+.chat-message--user {
+  background: #007aff;
+  color: #fff;
+  margin-left: auto;
+  border-bottom-right-radius: 6px;
+}
+
+.chat-message--assistant {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1d1d1f;
+  margin-right: auto;
+  border-bottom-left-radius: 6px;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px 20px;
+  background: rgba(255, 255, 255, 0.6);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.chat-input-area input {
+  flex: 1;
+  padding: 14px 20px;
+  background: rgba(118, 118, 128, 0.08);
+  border: none;
+  border-radius: 24px;
+  color: #1d1d1f;
+  font-size: 15px;
+  outline: none;
+}
+
+.chat-input-area input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.12);
+}
+
+.chat-input-area input::placeholder {
+  color: #8e8e93;
+}
+
+.chat-input-area button {
+  width: 48px;
+  height: 48px;
+  background: #007aff;
+  border: none;
+  border-radius: 24px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chat-input-area button:hover {
+  background: #0066d6;
+  transform: scale(1.05);
+}
+
+/* ========================================
+   Workspace - Light Gradient
+======================================== */
+.workspace {
+  flex: 1;
+  position: relative;
+  background: linear-gradient(145deg, #e8f4fd 0%, #f0f4f8 50%, #fdf8f3 100%);
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.workspace-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workspace-empty p {
+  color: #8e8e93;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+/* ========================================
+   Photo Stack - Natural Layout
+======================================== */
+.photo-stack {
+  position: absolute;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  user-select: none;
+  padding: 12px;
+}
+
+.photo-stack:active {
+  cursor: grabbing;
+}
+
+/* Category label at top-left */
+.stack-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+/* Delete button - top right */
+.stack-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 59, 48, 0.9);
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.photo-stack:hover .stack-delete {
+  opacity: 1;
+}
+
+.stack-delete:hover {
+  transform: scale(1.1);
+  background: #ff3b30;
+}
+
+.stack-photos {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+
+.stack-photo {
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  background-color: #f0f0f5;
+  background-size: cover;
+  background-position: center;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8e8e93;
+  font-size: 11px;
+  text-align: center;
+  font-weight: 500;
+  transition: transform 0.2s ease;
+}
+
+/* Spread out the photos more */
+.stack-photo:nth-child(1) {
+  transform: rotate(-10deg) translate(-20px, 15px);
+  z-index: 1;
+}
+
+.stack-photo:nth-child(2) {
+  transform: rotate(0deg) translate(0, 0);
+  z-index: 2;
+}
+
+.stack-photo:nth-child(3) {
+  transform: rotate(10deg) translate(20px, -15px);
+  z-index: 3;
+}
+
+/* ========================================
+   Intersection Preview (Ghost)
+======================================== */
+.intersection-preview {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.intersection-preview .stack-photos {
+  filter: blur(0.5px);
+}
+
+.intersection-preview .stack-label {
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1.5px dashed #007aff;
+}
+
+/* ========================================
+   Intersection Stack (Created)
+======================================== */
+.photo-stack--intersection .stack-label {
+  background: linear-gradient(135deg, #007aff, #5856d6);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+}
+
+/* ========================================
+   Responsive
+======================================== */
+@media (max-width: 768px) {
+  .app-layout {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .category-panel--open {
+    width: 240px;
+    min-width: 240px;
+  }
+
+  .chat-panel--open {
+    width: 280px;
+    min-width: 280px;
+  }
+
+  .stack-photos {
+    width: 140px;
+    height: 140px;
+  }
+
+  .stack-photo {
+    width: 100px;
+    height: 100px;
+  }
+}
