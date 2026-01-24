@@ -72,6 +72,188 @@ const INTEREST_CATEGORIES = [
   { id: "goat", label: "염소", icon: "🐐", count: 12 },
 ];
 
+// New Category Modal Component
+const NewCategoryModal = ({ isOpen, onClose, onSubmit, allPhotos }) => {
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState('input'); // 'input' | 'analyzing' | 'complete'
+  const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState(null);
+
+  const handleAnalyze = async () => {
+    if (!query.trim()) return;
+
+    setStatus('analyzing');
+    setProgress(0);
+
+    // Simulate AI analysis with progress
+    const totalPhotos = allPhotos?.length || 100;
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 95) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + Math.random() * 15;
+      });
+    }, 200);
+
+    // Simulate backend response after 2.5 seconds
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    clearInterval(interval);
+    setProgress(100);
+
+    // Generate dummy result
+    const foundCount = Math.floor(Math.random() * 40) + 5;
+    const randomPhotos = allPhotos?.slice(0, foundCount) || [];
+
+    setResult({
+      label: query.trim(),
+      count: foundCount,
+      photos: randomPhotos
+    });
+    setStatus('complete');
+  };
+
+  const handleConfirm = () => {
+    if (result) {
+      onSubmit(result);
+    }
+    handleReset();
+    onClose();
+  };
+
+  const handleReset = () => {
+    setQuery('');
+    setStatus('input');
+    setProgress(0);
+    setResult(null);
+  };
+
+  const handleClose = () => {
+    handleReset();
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <motion.div
+      className="new-category-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        className="new-category-modal"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      >
+        {/* Input State */}
+        {status === 'input' && (
+          <>
+            <div className="new-category-icon">🔍</div>
+            <h3 className="new-category-title">무엇을 찾고 싶나요?</h3>
+            <p className="new-category-subtitle">AI가 사진에서 해당 항목을 찾아드립니다</p>
+
+            <input
+              type="text"
+              className="new-category-input"
+              placeholder="예: 커피잔, 노트북, 바다..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+              autoFocus
+            />
+
+            <div className="new-category-actions">
+              <button className="new-category-btn new-category-btn--cancel" onClick={handleClose}>
+                취소
+              </button>
+              <button
+                className="new-category-btn new-category-btn--primary"
+                onClick={handleAnalyze}
+                disabled={!query.trim()}
+              >
+                분석 시작
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Analyzing State */}
+        {status === 'analyzing' && (
+          <>
+            <div className="new-category-analyzing">
+              <motion.div
+                className="analyzing-icon"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+              >
+                🔍
+              </motion.div>
+              <h3 className="new-category-title">AI가 분석 중...</h3>
+              <p className="new-category-subtitle">"{query}"를 찾고 있습니다</p>
+
+              <div className="analyzing-progress">
+                <div
+                  className="analyzing-progress-bar"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="analyzing-status">{Math.floor(progress)}% 완료</p>
+            </div>
+          </>
+        )}
+
+        {/* Complete State */}
+        {status === 'complete' && result && (
+          <>
+            <motion.div
+              className="new-category-complete-icon"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            >
+              ✨
+            </motion.div>
+            <h3 className="new-category-title">"{result.label}" 발견!</h3>
+            <p className="new-category-subtitle">
+              <strong>{result.count}장</strong>의 사진에서 발견되었습니다
+            </p>
+
+            {/* Preview thumbnails */}
+            <div className="new-category-preview">
+              {result.photos.slice(0, 4).map((photo, i) => (
+                <div
+                  key={i}
+                  className="new-category-preview-item"
+                  style={{ backgroundImage: `url(${photo})` }}
+                />
+              ))}
+              {result.count > 4 && (
+                <div className="new-category-preview-more">
+                  +{result.count - 4}
+                </div>
+              )}
+            </div>
+
+            <div className="new-category-actions">
+              <button className="new-category-btn new-category-btn--cancel" onClick={handleReset}>
+                다시 시도
+              </button>
+              <button className="new-category-btn new-category-btn--primary" onClick={handleConfirm}>
+                카테고리 추가
+              </button>
+            </div>
+          </>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+};
+
 // Onboarding Overlay Component
 const OnboardingOverlay = ({ onComplete }) => {
   const [step, setStep] = useState(1);
@@ -738,7 +920,7 @@ const PhotoStack = ({
 };
 
 // Category Panel Component - Professional Redesign
-const CategoryPanel = ({ isOpen, onToggle, checkedItems, onItemToggle }) => {
+const CategoryPanel = ({ isOpen, onToggle, checkedItems, onItemToggle, customCategories = [], onNewCategory }) => {
   return (
     <div className={`category-panel ${isOpen ? "category-panel--open" : ""}`}>
       {!isOpen && (
@@ -793,10 +975,38 @@ const CategoryPanel = ({ isOpen, onToggle, checkedItems, onItemToggle }) => {
                 </div>
               );
             })}
+
+            {/* 사용자 지정 카테고리 */}
+            {customCategories.length > 0 && (
+              <div className="category-group">
+                <h3 className="category-title">
+                  <Sparkles size={14} className="category-title-icon" />
+                  사용자 지정
+                </h3>
+                <ul className="category-list">
+                  {customCategories.map((item) => {
+                    const isChecked = checkedItems.includes(item.id);
+                    return (
+                      <li
+                        key={item.id}
+                        className={`category-item ${isChecked ? 'category-item--selected' : ''}`}
+                        onClick={() => onItemToggle(item.id, item.label)}
+                      >
+                        <span className="category-item-label">{item.label}</span>
+                        <span className="category-item-count">{item.count}장</span>
+                        <span className="category-item-toggle">
+                          {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* Add Button - Ghost style */}
-          <button className="add-category-btn">
+          <button className="add-category-btn" onClick={onNewCategory}>
             <Plus size={14} />
             <span>새 카테고리</span>
           </button>
@@ -895,6 +1105,8 @@ export default function App({ onBack }) {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'canvas'
   const [showOnboarding, setShowOnboarding] = useState(true); // Show onboarding for new users
   const [viewerPhoto, setViewerPhoto] = useState(null); // Photo lightbox
+  const [customCategories, setCustomCategories] = useState([]); // User-defined categories
+  const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
   const stackIdRef = useRef(0);
   const workspaceRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -915,19 +1127,40 @@ export default function App({ onBack }) {
     return () => window.removeEventListener("resize", updateToolbarOffset);
   }, []);
 
+  // All photos including custom categories
+  const allPhotosMap = useMemo(() => {
+    const customPhotosMap = {};
+    customCategories.forEach(cat => {
+      customPhotosMap[cat.id] = cat.photos;
+    });
+    return { ...SAMPLE_PHOTOS, ...customPhotosMap };
+  }, [customCategories]);
+
   // Calculate filtered photos for Grid mode (with deduplication)
   const filteredPhotos = useMemo(() => {
     let photos;
     if (checkedItems.length === 0) {
       // Show all photos if nothing selected
-      photos = Object.values(SAMPLE_PHOTOS).flat();
+      photos = Object.values(allPhotosMap).flat();
     } else {
       // Show only photos from selected categories
-      photos = checkedItems.flatMap(itemId => SAMPLE_PHOTOS[itemId] || []);
+      photos = checkedItems.flatMap(itemId => allPhotosMap[itemId] || []);
     }
     // Remove duplicates using Set
     return [...new Set(photos)];
-  }, [checkedItems]);
+  }, [checkedItems, allPhotosMap]);
+
+  // Handle adding new custom category
+  const handleAddCustomCategory = useCallback((result) => {
+    const newId = `custom_${Date.now()}`;
+    const newCategory = {
+      id: newId,
+      label: result.label,
+      count: result.count,
+      photos: result.photos
+    };
+    setCustomCategories(prev => [...prev, newCategory]);
+  }, []);
 
   // Handle item toggle differently based on view mode
   const handleItemToggle = useCallback((itemId, label) => {
@@ -1145,6 +1378,8 @@ export default function App({ onBack }) {
         onToggle={() => setLeftPanelOpen(!leftPanelOpen)}
         checkedItems={checkedItems}
         onItemToggle={handleItemToggle}
+        customCategories={customCategories}
+        onNewCategory={() => setShowNewCategoryModal(true)}
       />
 
       <main className="workspace" ref={workspaceRef}>
@@ -1272,6 +1507,18 @@ export default function App({ onBack }) {
       <AnimatePresence>
         {showOnboarding && (
           <OnboardingOverlay onComplete={() => setShowOnboarding(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* New Category Modal */}
+      <AnimatePresence>
+        {showNewCategoryModal && (
+          <NewCategoryModal
+            isOpen={showNewCategoryModal}
+            onClose={() => setShowNewCategoryModal(false)}
+            onSubmit={handleAddCustomCategory}
+            allPhotos={filteredPhotos}
+          />
         )}
       </AnimatePresence>
     </div>
