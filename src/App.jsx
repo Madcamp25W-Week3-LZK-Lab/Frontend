@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Send, MessageSquare } from "lucide-react";
+import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Send, MessageSquare, LayoutGrid, Layers } from "lucide-react";
 
 // Sample photos data
 const SAMPLE_PHOTOS = {
@@ -111,6 +111,36 @@ const ExpandedFolder = ({ stack, onClose }) => {
         ))}
       </div>
     </motion.div>
+  );
+};
+
+// Photo Grid Component for Gallery Mode
+const PhotoGrid = ({ photos, onPhotoClick }) => {
+  return (
+    <div className="photo-grid">
+      {photos.length === 0 ? (
+        <div className="photo-grid-empty">
+          <span className="photo-grid-empty-icon">🖼️</span>
+          <p>왼쪽 패널에서 카테고리를 선택하세요</p>
+          <p className="photo-grid-empty-hint">선택한 카테고리의 사진만 표시됩니다</p>
+        </div>
+      ) : (
+        <div className="photo-grid-container">
+          {photos.map((photo, index) => (
+            <motion.div
+              key={`${photo}-${index}`}
+              className="photo-grid-item"
+              style={{ backgroundImage: `url(${photo})` }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: index * 0.02, type: "spring", stiffness: 400, damping: 25 }}
+              whileHover={{ scale: 1.03 }}
+              onClick={() => onPhotoClick?.(photo)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -425,28 +455,75 @@ export default function App({ onBack }) {
   const [magneticStackIds, setMagneticStackIds] = useState([]);
   const [glowingStackIds, setGlowingStackIds] = useState([]);
   const [expandedStacks, setExpandedStacks] = useState([]);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'canvas'
   const stackIdRef = useRef(0);
 
+  // Calculate filtered photos for Grid mode
+  const filteredPhotos = useMemo(() => {
+    if (checkedItems.length === 0) {
+      // Show all photos if nothing selected
+      return Object.values(SAMPLE_PHOTOS).flat();
+    }
+    // Show only photos from selected categories
+    return checkedItems.flatMap(itemId => SAMPLE_PHOTOS[itemId] || []);
+  }, [checkedItems]);
+
+  // Handle item toggle differently based on view mode
   const handleItemToggle = useCallback((itemId, label) => {
-    setCheckedItems(prev => {
-      if (prev.includes(itemId)) {
-        setStacks(s => s.filter(stack => stack.categoryId !== itemId));
-        return prev.filter(id => id !== itemId);
-      } else {
-        const existingCount = prev.length;
-        const newStack = {
+    if (viewMode === 'grid') {
+      // Grid mode: just toggle filter
+      setCheckedItems(prev =>
+        prev.includes(itemId)
+          ? prev.filter(id => id !== itemId)
+          : [...prev, itemId]
+      );
+    } else {
+      // Canvas mode: spawn/remove stacks
+      setCheckedItems(prev => {
+        if (prev.includes(itemId)) {
+          setStacks(s => s.filter(stack => stack.categoryId !== itemId));
+          return prev.filter(id => id !== itemId);
+        } else {
+          const existingCount = prev.length;
+          const newStack = {
+            id: ++stackIdRef.current,
+            categoryId: itemId,
+            label: label,
+            photos: SAMPLE_PHOTOS[itemId] || [],
+            x: 80 + (existingCount % 4) * 165,
+            y: 80 + Math.floor(existingCount / 4) * 180,
+          };
+          setStacks(s => [...s, newStack]);
+          return [...prev, itemId];
+        }
+      });
+    }
+  }, [viewMode]);
+
+  // Handle view mode change - sync stacks with checked items
+  const handleViewModeChange = useCallback((newMode) => {
+    if (newMode === viewMode) return;
+
+    if (newMode === 'canvas' && checkedItems.length > 0) {
+      // Create stacks for checked items when switching to canvas
+      const newStacks = checkedItems.map((itemId, index) => {
+        const categoryItem = Object.values(CATEGORIES)
+          .flatMap(g => g.items)
+          .find(item => item.id === itemId);
+        return {
           id: ++stackIdRef.current,
           categoryId: itemId,
-          label: label,
+          label: categoryItem?.label || itemId,
           photos: SAMPLE_PHOTOS[itemId] || [],
-          x: 80 + (existingCount % 4) * 165,
-          y: 80 + Math.floor(existingCount / 4) * 180,
+          x: 80 + (index % 4) * 165,
+          y: 80 + Math.floor(index / 4) * 180,
         };
-        setStacks(s => [...s, newStack]);
-        return [...prev, itemId];
-      }
-    });
-  }, []);
+      });
+      setStacks(newStacks);
+    }
+
+    setViewMode(newMode);
+  }, [viewMode, checkedItems]);
 
   const handleDeleteStack = useCallback((stackId, categoryId) => {
     setStacks(prev => prev.filter(s => s.id !== stackId));
@@ -604,54 +681,81 @@ export default function App({ onBack }) {
       />
 
       <main className="workspace">
-        <AnimatePresence>
-          {stacks.map(stack => (
-            <PhotoStack
-              key={stack.id}
-              stack={stack}
-              onPositionChange={handlePositionChange}
-              onDragEnd={handleDragEnd}
-              onDelete={handleDeleteStack}
-              onClick={handleStackClick}
-              isMagnetic={magneticStackIds.includes(stack.id)}
-              isGlowing={glowingStackIds.includes(stack.id)}
-            />
-          ))}
-          {intersectionStacks.map(stack => (
-            <PhotoStack
-              key={`intersection-${stack.id}`}
-              stack={stack}
-              onPositionChange={handleIntersectionPositionChange}
-              onDragEnd={(id, x, y) => handleIntersectionPositionChange(id, x, y)}
-              onDelete={handleDeleteIntersection}
-              onClick={handleStackClick}
-              isIntersection={true}
-            />
-          ))}
-          {previewIntersection && (
-            <PhotoStack
-              key="preview"
-              stack={previewIntersection}
-              isPreview={true}
-            />
+        {/* Canvas Mode: Stacks */}
+        {viewMode === 'canvas' && (
+          <AnimatePresence>
+            {stacks.map(stack => (
+              <PhotoStack
+                key={stack.id}
+                stack={stack}
+                onPositionChange={handlePositionChange}
+                onDragEnd={handleDragEnd}
+                onDelete={handleDeleteStack}
+                onClick={handleStackClick}
+                isMagnetic={magneticStackIds.includes(stack.id)}
+                isGlowing={glowingStackIds.includes(stack.id)}
+              />
+            ))}
+            {intersectionStacks.map(stack => (
+              <PhotoStack
+                key={`intersection-${stack.id}`}
+                stack={stack}
+                onPositionChange={handleIntersectionPositionChange}
+                onDragEnd={(id, x, y) => handleIntersectionPositionChange(id, x, y)}
+                onDelete={handleDeleteIntersection}
+                onClick={handleStackClick}
+                isIntersection={true}
+              />
+            ))}
+            {previewIntersection && (
+              <PhotoStack
+                key="preview"
+                stack={previewIntersection}
+                isPreview={true}
+              />
+            )}
+          </AnimatePresence>
+        )}
+
+        {/* View Mode Toggle + Arrange Button */}
+        <div className="workspace-toolbar">
+          <div className="view-mode-toggle">
+            <button
+              className={`view-mode-btn ${viewMode === 'grid' ? 'view-mode-btn--active' : ''}`}
+              onClick={() => handleViewModeChange('grid')}
+            >
+              <LayoutGrid size={16} />
+              그리드
+            </button>
+            <button
+              className={`view-mode-btn ${viewMode === 'canvas' ? 'view-mode-btn--active' : ''}`}
+              onClick={() => handleViewModeChange('canvas')}
+            >
+              <Layers size={16} />
+              캔버스
+            </button>
+          </div>
+
+          {viewMode === 'canvas' && (
+            <motion.button
+              className="arrange-button"
+              onClick={handleArrangeStacks}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className="arrange-icon">⊞</span>
+              정렬
+            </motion.button>
           )}
-        </AnimatePresence>
+        </div>
 
-        {/* Arrange Button */}
-        <motion.button
-          className="arrange-button"
-          onClick={handleArrangeStacks}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-        >
-          <span className="arrange-icon">⊞</span>
-          정렬
-        </motion.button>
+        {/* Grid Mode: Photo Gallery */}
+        {viewMode === 'grid' && (
+          <PhotoGrid photos={filteredPhotos} />
+        )}
 
-        {isEmpty && (
+        {/* Canvas Mode: Empty State */}
+        {viewMode === 'canvas' && isEmpty && (
           <div className="workspace-empty">
             <span className="workspace-empty-icon">📂</span>
             <p>왼쪽 패널에서 카테고리를 선택하세요</p>
