@@ -701,6 +701,54 @@ body {
     0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
+/* ========================================
+   Stacked Polaroid Style
+======================================== */
+.stack-polaroid {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.stack-polaroid-photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: #f0f0f5;
+  border-radius: 12px;
+  border: 3px solid #fff;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stack-polaroid-photo--top {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.18),
+    0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+/* Hover effect - spread out the stack */
+.photo-stack:hover .stack-polaroid-photo {
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.2),
+    0 16px 40px rgba(0, 0, 0, 0.15);
+}
+
+.photo-stack:hover .stack-polaroid-photo--top {
+  transform: rotate(0deg) translateY(-4px) !important;
+}
+
+/* Stack count badge adjustment */
+.stack-polaroid .stack-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 100;
+}
+
 /* Dynamic Grid Layouts with Micro-Gap */
 .stack-container.grid-1 {
   display: block;
@@ -901,20 +949,20 @@ body {
 }
 
 .folder-popover {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border-radius: 16px;
-  padding: 14px;
-  min-width: 200px;
-  max-width: 260px;
-  max-height: 340px;
+  border-radius: 20px;
+  padding: 16px;
+  min-width: 397px;
+  /* 365 + padding */
+  max-height: 80vh;
   z-index: 1000;
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.08),
-    0 16px 48px rgba(0, 0, 0, 0.15);
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 24px 64px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.6);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .folder-popover-header {
@@ -999,6 +1047,35 @@ body {
 .folder-masonry-item:hover {
   transform: scale(1.04);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   Spread Grid - Photos animate from stack
+======================================== */
+.folder-spread-grid {
+  position: relative;
+  width: 365px;
+  /* 4 * 85 + 3 * 5 gaps */
+  height: auto;
+  min-height: 85px;
+}
+
+.folder-spread-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 85px;
+  height: 85px;
+  background-size: cover;
+  background-position: center;
+  background-color: #e8e8ed;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.folder-spread-item:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 /* ========================================

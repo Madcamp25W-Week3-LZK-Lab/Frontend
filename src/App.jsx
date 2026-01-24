@@ -366,56 +366,101 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
   );
 };
 
-// Expanded Folder View - Popover only (backdrop handled by parent)
-const ExpandedFolder = ({ stack, onClose }) => {
+// Expanded Folder View - Photos spread from stack and reassemble on close
+const ExpandedFolder = ({ stack, onClose, onPhotoClick }) => {
   const photos = stack?.photos || [];
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    // Wait for animation to complete before actually closing
+    setTimeout(() => {
+      onClose();
+    }, 400);
+  };
 
   return (
     <motion.div
-      className="folder-popover"
+      className="folder-expanded"
       style={{
         position: 'absolute',
         left: stack?.x || 0,
         top: stack?.y || 0,
       }}
-      initial={{ scale: 0.9, opacity: 0, y: -10 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      exit={{ scale: 0.9, opacity: 0, y: -10 }}
-      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15 }}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Compact Header with hierarchy */}
-      <div className="folder-popover-header">
-        <div className="folder-popover-title">
-          <span className="folder-popover-name">{stack?.label}</span>
-          <span className="folder-popover-count">{photos.length}장</span>
-        </div>
-        <button className="folder-popover-close" onClick={onClose}>✕</button>
+      {/* Header - floating above grid */}
+      <div className="folder-expanded-header">
+        <span className="folder-expanded-label">{stack?.label}</span>
+        <span className="folder-expanded-count">{photos.length}장</span>
+        <button className="folder-expanded-close" onClick={handleClose}>✕</button>
       </div>
 
-      {/* Photo Grid */}
-      <div className="folder-masonry">
-        {photos.map((photo, index) => (
-          <motion.div
-            key={index}
-            className="folder-masonry-item"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 25,
-              delay: index * 0.03
-            }}
-            style={{ backgroundImage: `url(${photo})` }}
-          />
-        ))}
+      {/* Photo Grid - transparent container */}
+      <div
+        className="folder-expanded-grid"
+        style={{
+          width: Math.min(photos.length, 4) * 90,
+          height: Math.ceil(photos.length / 4) * 90
+        }}
+      >
+        {photos.map((photo, index) => {
+          const col = index % 4;
+          const row = Math.floor(index / 4);
+          const targetX = col * 90;
+          const targetY = row * 90;
+
+          // Initial position with random rotation (stacked look)
+          const seed = (stack?.id || 0) * 100 + index;
+          const initRotation = index === 0 ? 0 : ((seed % 17) - 8);
+          const initOffsetX = index === 0 ? 0 : ((seed % 13) - 6);
+          const initOffsetY = index === 0 ? 0 : (((seed * 7) % 13) - 6);
+
+          return (
+            <motion.div
+              key={index}
+              className="folder-expanded-photo"
+              style={{ backgroundImage: `url(${photo})` }}
+              initial={{
+                x: initOffsetX,
+                y: initOffsetY,
+                scale: 0.8,
+                opacity: 0,
+                rotate: initRotation
+              }}
+              animate={isClosing ? {
+                x: initOffsetX,
+                y: initOffsetY,
+                scale: 0.8,
+                opacity: 0,
+                rotate: initRotation
+              } : {
+                x: targetX,
+                y: targetY,
+                scale: 1,
+                opacity: 1,
+                rotate: 0
+              }}
+              transition={{
+                duration: 0.45,
+                delay: isClosing ? (photos.length - index) * 0.02 : index * 0.025,
+                ease: [0.4, 0, 0.2, 1]
+              }}
+              whileHover={!isClosing ? { scale: 1.05, zIndex: 10 } : {}}
+              onClick={() => !isClosing && onPhotoClick?.(photo)}
+            />
+          );
+        })}
       </div>
     </motion.div>
   );
 };
 
-// Photo Grid Component for Gallery Mode
+// Photo Grid Component - Simple Grid Layout
 const PhotoGrid = ({ photos, onPhotoClick }) => {
   return (
     <div className="photo-grid">
@@ -445,7 +490,7 @@ const PhotoGrid = ({ photos, onPhotoClick }) => {
   );
 };
 
-// Photo Stack Component with Dynamic Grid
+// Photo Stack Component - Stacked Polaroid Style
 const PhotoStack = ({
   stack,
   onPositionChange,
@@ -460,6 +505,23 @@ const PhotoStack = ({
   const photos = stack.photos || [];
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, stackX: 0, stackY: 0, hasMoved: false });
+
+  // Generate random rotations and offsets for each photo (stable across re-renders)
+  const photoTransforms = useMemo(() => {
+    return photos.slice(0, 4).map((_, index) => {
+      if (index === 0) return { rotation: 0, offsetX: 0, offsetY: 0 }; // Top photo centered
+      // Generate pseudo-random values based on stack id and index
+      const seed1 = (stack.id * 137 + index * 47) % 100;
+      const seed2 = (stack.id * 89 + index * 31) % 100;
+      const seed3 = (stack.id * 61 + index * 23) % 100;
+      // Rotation: -8 to +8 degrees
+      const rotation = (seed1 % 17) - 8;
+      // Offset: -6 to +6 pixels in each direction
+      const offsetX = (seed2 % 13) - 6;
+      const offsetY = (seed3 % 13) - 6;
+      return { rotation, offsetX, offsetY };
+    });
+  }, [photos.length, stack.id]);
 
   const handlePointerDown = (e) => {
     if (isPreview) return;
@@ -515,7 +577,8 @@ const PhotoStack = ({
     isGlowing ? 'photo-stack--glowing' : '',
   ].filter(Boolean).join(' ');
 
-  const gridClass = getGridClass(photos.length);
+  // Show max 4 photos in the stack
+  const displayPhotos = photos.slice(0, 4).reverse(); // Reverse so first photo renders on top
 
   return (
     <motion.div
@@ -559,37 +622,26 @@ const PhotoStack = ({
         </button>
       )}
 
-      {/* Stack Container with Dynamic Grid */}
-      <div className={`stack-container ${gridClass}`}>
-        {photos.length === 1 && (
-          <div
-            className="stack-photo stack-photo-full"
-            style={{ backgroundImage: `url(${photos[0]})` }}
-          />
-        )}
-        {photos.length === 2 && (
-          <>
-            <div className="stack-photo stack-photo-half" style={{ backgroundImage: `url(${photos[0]})` }} />
-            <div className="stack-photo stack-photo-half" style={{ backgroundImage: `url(${photos[1]})` }} />
-          </>
-        )}
-        {photos.length === 3 && (
-          <>
-            <div className="stack-photo stack-photo-main" style={{ backgroundImage: `url(${photos[0]})` }} />
-            <div className="stack-photo stack-photo-sub" style={{ backgroundImage: `url(${photos[1]})` }} />
-            <div className="stack-photo stack-photo-sub" style={{ backgroundImage: `url(${photos[2]})` }} />
-          </>
-        )}
-        {photos.length >= 4 && (
-          <>
-            <div className="stack-photo stack-photo-quad" style={{ backgroundImage: `url(${photos[0]})` }} />
-            <div className="stack-photo stack-photo-quad" style={{ backgroundImage: `url(${photos[1]})` }} />
-            <div className="stack-photo stack-photo-quad" style={{ backgroundImage: `url(${photos[2]})` }} />
-            <div className="stack-photo stack-photo-quad" style={{ backgroundImage: `url(${photos[3]})` }} />
-          </>
-        )}
+      {/* Stacked Photos Container */}
+      <div className="stack-polaroid">
+        {displayPhotos.map((photo, index) => {
+          const actualIndex = displayPhotos.length - 1 - index;
+          const transform = photoTransforms[actualIndex] || { rotation: 0, offsetX: 0, offsetY: 0 };
 
-        {/* Photo Count Badge - Softer color */}
+          return (
+            <div
+              key={`${photo}-${index}`}
+              className={`stack-polaroid-photo ${actualIndex === 0 ? 'stack-polaroid-photo--top' : ''}`}
+              style={{
+                backgroundImage: `url(${photo})`,
+                transform: `rotate(${transform.rotation}deg) translate(${transform.offsetX}px, ${transform.offsetY}px)`,
+                zIndex: displayPhotos.length - index,
+              }}
+            />
+          );
+        })}
+
+        {/* Photo Count Badge */}
         {photos.length > 1 && (
           <span className="stack-count">{photos.length}</span>
         )}
@@ -1088,6 +1140,7 @@ export default function App({ onBack }) {
               key={`expanded-${stack.id}`}
               stack={stack}
               onClose={() => handleCloseExpanded(stack.id)}
+              onPhotoClick={setViewerPhoto}
             />
           ))}
         </AnimatePresence>
