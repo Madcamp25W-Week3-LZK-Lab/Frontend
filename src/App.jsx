@@ -370,22 +370,43 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
 const ExpandedFolder = ({ stack, onClose, onPhotoClick }) => {
   const photos = stack?.photos || [];
   const [isClosing, setIsClosing] = useState(false);
+  const stackSize = 120;
+  const cellSize = 84;
+  const cellGap = 8;
 
   const handleClose = () => {
     setIsClosing(true);
     // Wait for animation to complete before actually closing
     setTimeout(() => {
       onClose();
-    }, 400);
+    }, 520);
   };
+
+  const columns = Math.min(4, photos.length || 1);
+  const rows = Math.ceil((photos.length || 1) / 4);
+  const innerGridWidth = columns * cellSize + (columns - 1) * cellGap;
+  const innerGridHeight = rows * cellSize + (rows - 1) * cellGap;
+  const containerPadding = 14;
+  const headerSpace = 44;
+  const containerWidth = innerGridWidth + containerPadding * 2;
+  const containerHeight = innerGridHeight + containerPadding * 2 + headerSpace;
+
+  const baseX = (stack?.x || 0) - (containerWidth - stackSize) / 2;
+  const baseY = (stack?.y || 0) - (containerHeight - stackSize) / 2;
+  const stackOffsetX = (containerWidth - stackSize) / 2;
+  const stackOffsetY = (containerHeight - stackSize) / 2;
+  const startScale = stackSize / cellSize;
+  const stackOrder = photos.slice(0, 4).reverse();
 
   return (
     <motion.div
       className="folder-expanded"
       style={{
         position: 'absolute',
-        left: stack?.x || 0,
-        top: stack?.y || 0,
+        left: baseX,
+        top: baseY,
+        width: containerWidth,
+        height: containerHeight,
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -393,7 +414,7 @@ const ExpandedFolder = ({ stack, onClose, onPhotoClick }) => {
       transition={{ duration: 0.15 }}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Header - floating above grid */}
+      {/* Minimal header */}
       <div className="folder-expanded-header">
         <span className="folder-expanded-label">{stack?.label}</span>
         <span className="folder-expanded-count">{photos.length}장</span>
@@ -404,39 +425,54 @@ const ExpandedFolder = ({ stack, onClose, onPhotoClick }) => {
       <div
         className="folder-expanded-grid"
         style={{
-          width: Math.min(photos.length, 4) * 90,
-          height: Math.ceil(photos.length / 4) * 90
+          width: containerWidth,
+          height: containerHeight,
         }}
       >
         {photos.map((photo, index) => {
           const col = index % 4;
           const row = Math.floor(index / 4);
-          const targetX = col * 90;
-          const targetY = row * 90;
+          const targetX = containerPadding + col * (cellSize + cellGap);
+          const targetY = containerPadding + headerSpace + row * (cellSize + cellGap);
 
           // Initial position with random rotation (stacked look)
-          const seed = (stack?.id || 0) * 100 + index;
-          const initRotation = index === 0 ? 0 : ((seed % 17) - 8);
-          const initOffsetX = index === 0 ? 0 : ((seed % 13) - 6);
-          const initOffsetY = index === 0 ? 0 : (((seed * 7) % 13) - 6);
+          const seed1 = ((stack?.id || 0) * 137 + index * 47) % 100;
+          const seed2 = ((stack?.id || 0) * 89 + index * 31) % 100;
+          const seed3 = ((stack?.id || 0) * 61 + index * 23) % 100;
+          const initRotation = index === 0 ? 0 : (seed1 % 17) - 8;
+          const initOffsetX = index === 0 ? 0 : (seed2 % 13) - 6;
+          const initOffsetY = index === 0 ? 0 : (seed3 % 13) - 6;
+          const startX = stackOffsetX + (stackSize - cellSize) / 2 + initOffsetX;
+          const startY = stackOffsetY + (stackSize - cellSize) / 2 + initOffsetY;
 
           return (
             <motion.div
               key={index}
               className="folder-expanded-photo"
-              style={{ backgroundImage: `url(${photo})` }}
+              style={{
+                backgroundImage: `url(${photo})`,
+                width: cellSize,
+                height: cellSize,
+                zIndex: (() => {
+                  const stackRank = stackOrder.indexOf(photo);
+                  if (stackRank !== -1) {
+                    return photos.length + (stackOrder.length - stackRank);
+                  }
+                  return photos.length - index;
+                })(),
+              }}
               initial={{
-                x: initOffsetX,
-                y: initOffsetY,
-                scale: 0.8,
-                opacity: 0,
+                x: startX,
+                y: startY,
+                scale: startScale,
+                opacity: 1,
                 rotate: initRotation
               }}
               animate={isClosing ? {
-                x: initOffsetX,
-                y: initOffsetY,
-                scale: 0.8,
-                opacity: 0,
+                x: startX,
+                y: startY,
+                scale: startScale,
+                opacity: 1,
                 rotate: initRotation
               } : {
                 x: targetX,
@@ -500,7 +536,8 @@ const PhotoStack = ({
   isPreview,
   isIntersection,
   isMagnetic,
-  isGlowing
+  isGlowing,
+  isHidden
 }) => {
   const photos = stack.photos || [];
   const [isDragging, setIsDragging] = useState(false);
@@ -580,6 +617,8 @@ const PhotoStack = ({
   // Show max 4 photos in the stack
   const displayPhotos = photos.slice(0, 4).reverse(); // Reverse so first photo renders on top
 
+  const resolvedOpacity = isHidden ? 0 : isPreview ? 0.7 : 1;
+
   return (
     <motion.div
       className={classNames}
@@ -587,6 +626,7 @@ const PhotoStack = ({
         position: 'absolute',
         cursor: isDragging ? 'grabbing' : 'grab',
         touchAction: 'none',
+        pointerEvents: isHidden ? 'none' : 'auto',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -597,8 +637,8 @@ const PhotoStack = ({
         left: stack.x,
         top: stack.y,
         scale: isDragging ? 1.05 : 1,
-        opacity: isPreview ? 0.7 : 1,
-        zIndex: isDragging ? 100 : 1,
+        opacity: resolvedOpacity,
+        zIndex: isHidden ? 0 : isDragging ? 100 : 1,
       }}
       exit={{ scale: 0, opacity: 0 }}
       transition={{
@@ -627,11 +667,12 @@ const PhotoStack = ({
         {displayPhotos.map((photo, index) => {
           const actualIndex = displayPhotos.length - 1 - index;
           const transform = photoTransforms[actualIndex] || { rotation: 0, offsetX: 0, offsetY: 0 };
+          const isTop = index === 0;
 
           return (
             <div
               key={`${photo}-${index}`}
-              className={`stack-polaroid-photo ${actualIndex === 0 ? 'stack-polaroid-photo--top' : ''}`}
+              className={`stack-polaroid-photo ${isTop ? 'stack-polaroid-photo--top' : ''}`}
               style={{
                 backgroundImage: `url(${photo})`,
                 transform: `rotate(${transform.rotation}deg) translate(${transform.offsetX}px, ${transform.offsetY}px)`,
@@ -907,10 +948,6 @@ export default function App({ onBack }) {
     });
   }, []);
 
-  const handleCloseAllExpanded = useCallback(() => {
-    setExpandedStacks([]);
-  }, []);
-
   const handleCloseExpanded = useCallback((stackId) => {
     setExpandedStacks(prev => prev.filter(s => s.id !== stackId));
   }, []);
@@ -1021,6 +1058,10 @@ export default function App({ onBack }) {
   }, [stacks.length]);
 
   const isEmpty = stacks.length === 0 && intersectionStacks.length === 0;
+  const expandedStackIds = useMemo(
+    () => new Set(expandedStacks.map((stack) => stack.id)),
+    [expandedStacks]
+  );
 
   return (
     <div
@@ -1053,6 +1094,7 @@ export default function App({ onBack }) {
                 onClick={handleStackClick}
                 isMagnetic={magneticStackIds.includes(stack.id)}
                 isGlowing={glowingStackIds.includes(stack.id)}
+                isHidden={expandedStackIds.has(stack.id)}
               />
             ))}
             {intersectionStacks.map(stack => (
@@ -1064,6 +1106,7 @@ export default function App({ onBack }) {
                 onDelete={handleDeleteIntersection}
                 onClick={handleStackClick}
                 isIntersection={true}
+                isHidden={expandedStackIds.has(stack.id)}
               />
             ))}
             {previewIntersection && (
@@ -1126,15 +1169,6 @@ export default function App({ onBack }) {
 
         {/* Expanded Folder Popovers */}
         <AnimatePresence>
-          {expandedStacks.length > 0 && (
-            <motion.div
-              className="folder-backdrop-blur"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleCloseAllExpanded}
-            />
-          )}
           {expandedStacks.map(stack => (
             <ExpandedFolder
               key={`expanded-${stack.id}`}
