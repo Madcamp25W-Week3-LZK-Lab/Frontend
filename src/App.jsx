@@ -1175,24 +1175,32 @@ export default function App({ onBack }) {
       // Canvas mode: spawn/remove stacks
       setCheckedItems(prev => {
         if (prev.includes(itemId)) {
+          // Remove stack
           setStacks(s => s.filter(stack => stack.categoryId !== itemId));
           return prev.filter(id => id !== itemId);
         } else {
-          const existingCount = prev.length;
-          const newStack = {
-            id: ++stackIdRef.current,
-            categoryId: itemId,
-            label: label,
-            photos: SAMPLE_PHOTOS[itemId] || [],
-            x: 80 + (existingCount % 4) * 165,
-            y: 80 + Math.floor(existingCount / 4) * 180,
-          };
-          setStacks(s => [...s, newStack]);
+          // Add stack - check for existing to prevent duplicates
+          setStacks(s => {
+            // Prevent duplicate: check if stack with this categoryId already exists
+            if (s.some(stack => stack.categoryId === itemId)) {
+              return s;
+            }
+            const existingCount = s.length;
+            const newStack = {
+              id: ++stackIdRef.current,
+              categoryId: itemId,
+              label: label,
+              photos: allPhotosMap[itemId] || [],
+              x: 80 + (existingCount % 4) * 165,
+              y: 80 + Math.floor(existingCount / 4) * 180,
+            };
+            return [...s, newStack];
+          });
           return [...prev, itemId];
         }
       });
     }
-  }, [viewMode]);
+  }, [viewMode, allPhotosMap]);
 
   // Handle view mode change - sync stacks with checked items
   const handleViewModeChange = useCallback((newMode) => {
