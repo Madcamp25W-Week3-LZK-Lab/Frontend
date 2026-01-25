@@ -1,14 +1,100 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { authApi } from "../../lib/api";
 import "./LandingPage.css";
 
 export default function LandingPage({ onLogin }) {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [isLoginMode, setIsLoginMode] = useState(true);
+    const [authError, setAuthError] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [passwordConfirm, setPasswordConfirm] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e) => {
+    useEffect(() => {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+            return;
+        }
+
+        const existing = document.querySelector('script[data-google-identity="true"]');
+        if (existing) {
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.dataset.googleIdentity = "true";
+        document.head.appendChild(script);
+    }, []);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onLogin?.();
+        setAuthError("");
+
+        if (!email || !password) {
+            setAuthError("이메일과 비밀번호를 입력해주세요.");
+            return;
+        }
+
+        if (!isLoginMode && password !== passwordConfirm) {
+            setAuthError("비밀번호가 일치하지 않습니다.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const payload = { email, password };
+            const data = isLoginMode
+                ? await authApi.login(payload)
+                : await authApi.signup(payload);
+
+            const token = data?.access_token;
+            if (token) {
+                localStorage.setItem("auth_token", token);
+            }
+            localStorage.setItem("auth_user", JSON.stringify(data));
+            onLogin?.();
+        } catch (error) {
+            setAuthError(error?.message || "로그인에 실패했습니다.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleGoogleLogin = () => {
+        setAuthError("");
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+            setAuthError("Google Client ID가 설정되어 있지 않습니다.");
+            return;
+        }
+
+        if (!window.google?.accounts?.id) {
+            setAuthError("Google 로그인 스크립트 로드 중입니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
+        window.google.accounts.id.initialize({
+            client_id: clientId,
+            ux_mode: "popup",
+            callback: async (response) => {
+                try {
+                    const idToken = response.credential;
+                    const data = await authApi.googleLogin(idToken);
+                    localStorage.setItem("auth_token", idToken);
+                    localStorage.setItem("auth_user", JSON.stringify(data));
+                    onLogin?.();
+                } catch (error) {
+                    setAuthError(error?.message || "Google 로그인에 실패했습니다.");
+                }
+            },
+        });
+
+        window.google.accounts.id.prompt();
     };
 
     return (
@@ -79,28 +165,43 @@ export default function LandingPage({ onLogin }) {
                         <form onSubmit={handleSubmit}>
                             <input
                                 type="email"
+                                id="auth-email"
+                                name="email"
+                                autoComplete="email"
                                 placeholder="이메일"
                                 className="auth-input"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                             />
                             <input
                                 type="password"
+                                id="auth-password"
+                                name="password"
+                                autoComplete={isLoginMode ? "current-password" : "new-password"}
                                 placeholder="비밀번호"
                                 className="auth-input"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                             />
                             {!isLoginMode && (
                                 <input
                                     type="password"
+                                    id="auth-password-confirm"
+                                    name="passwordConfirm"
+                                    autoComplete="new-password"
                                     placeholder="비밀번호 확인"
                                     className="auth-input"
+                                    value={passwordConfirm}
+                                    onChange={(e) => setPasswordConfirm(e.target.value)}
                                 />
                             )}
-                            <button type="submit" className="auth-submit">
+                            <button type="submit" className="auth-submit" disabled={isSubmitting}>
                                 {isLoginMode ? "로그인" : "가입하기"}
                             </button>
                             <div className="auth-divider">
                                 <span>또는</span>
                             </div>
-                            <button type="button" className="auth-google">
+                            <button type="button" className="auth-google" onClick={handleGoogleLogin}>
                                 <span className="google-icon" aria-hidden="true">
                                     <svg viewBox="0 0 48 48" role="img" focusable="false">
                                         <path
@@ -123,6 +224,11 @@ export default function LandingPage({ onLogin }) {
                                 </span>
                                 Google로 계속하기
                             </button>
+                            {authError && (
+                                <p className="auth-error" role="alert">
+                                    {authError}
+                                </p>
+                            )}
                         </form>
 
                         <p className="auth-switch">

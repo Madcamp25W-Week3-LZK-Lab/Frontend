@@ -343,6 +343,28 @@ body {
   color: #007aff;
 }
 
+.category-item-input {
+  flex: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.category-item-delete {
+  border: none;
+  background: transparent;
+  color: #c7c7cc;
+  font-size: 14px;
+  margin-right: 6px;
+  cursor: pointer;
+}
+
+.category-item-delete:hover {
+  color: #ff3b30;
+}
+
 /* Add Button - Ghost style */
 .add-category-btn {
   display: flex;
@@ -548,6 +570,16 @@ body {
 .workspace-empty-hint {
   font-size: 13px !important;
   color: #aeaeb2 !important;
+}
+
+.workspace-error {
+  margin: 16px;
+  padding: 10px 14px;
+  background: #fff4f4;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 13px;
 }
 
 /* ========================================
@@ -1379,6 +1411,22 @@ body {
   margin-bottom: 32px;
 }
 
+.onboarding-drive-preview {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+  justify-content: center;
+}
+
+.onboarding-drive-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
+}
+
 /* Step 1: Analysis */
 .onboarding-analysis {
   padding: 40px 0;
@@ -1878,4 +1926,82 @@ body {
   color: #aeaeb2;
   margin-left: auto;
   margin-right: 8px;
+}
+
+.drive-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.drive-modal {
+  width: min(480px, 92vw);
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.drive-modal-desc {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 6px 0 16px;
+}
+
+.drive-modal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.drive-modal-row label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.drive-modal-row select {
+  flex: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.drive-modal-btn {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: #111827;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.drive-modal-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.drive-modal-refresh {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #f3f4f6;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.drive-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
 }
