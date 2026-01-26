@@ -242,6 +242,18 @@ const getGridClass = (count) => {
   return 'grid-4';
 };
 
+const getStackSeed = (id) => {
+  if (typeof id === "number" && Number.isFinite(id)) return id;
+  if (typeof id === "string") {
+    let hash = 0;
+    for (let i = 0; i < id.length; i += 1) {
+      hash = (hash * 31 + id.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash);
+  }
+  return 0;
+};
+
 // Photo Viewer Lightbox Component
 const PhotoViewer = ({
   photo,
@@ -533,6 +545,7 @@ const ExpandedFolder = ({ stack, onClose, onPhotoClick, onMove }) => {
   const stackOffsetX = (containerWidth - stackSize) / 2;
   const stackOffsetY = (maxContainerHeight - stackSize) / 2;
   const startScale = stackSize / cellSize;
+  const stackSeed = getStackSeed(stack?.id);
   const stackOrder = photos.slice(0, 4).map((photo) => photo.id).reverse();
 
   const handlePointerDown = (e) => {
@@ -612,9 +625,9 @@ const ExpandedFolder = ({ stack, onClose, onPhotoClick, onMove }) => {
           const targetY = containerPadding + headerSpace + row * (cellSize + cellGap);
 
           // Initial position with random rotation (stacked look)
-          const seed1 = ((stack?.id || 0) * 137 + index * 47) % 100;
-          const seed2 = ((stack?.id || 0) * 89 + index * 31) % 100;
-          const seed3 = ((stack?.id || 0) * 61 + index * 23) % 100;
+          const seed1 = (stackSeed * 137 + index * 47) % 100;
+          const seed2 = (stackSeed * 89 + index * 31) % 100;
+          const seed3 = (stackSeed * 61 + index * 23) % 100;
           const initRotation = index === 0 ? 0 : (seed1 % 17) - 8;
           const initOffsetX = index === 0 ? 0 : (seed2 % 13) - 6;
           const initOffsetY = index === 0 ? 0 : (seed3 % 13) - 6;
@@ -721,12 +734,13 @@ const PhotoStack = ({
 
   // Generate random rotations and offsets for each photo (stable across re-renders)
   const photoTransforms = useMemo(() => {
+    const seedBase = getStackSeed(stack.id);
     return photos.slice(0, 4).map((_, index) => {
       if (index === 0) return { rotation: 0, offsetX: 0, offsetY: 0 }; // Top photo centered
       // Generate pseudo-random values based on stack id and index
-      const seed1 = (stack.id * 137 + index * 47) % 100;
-      const seed2 = (stack.id * 89 + index * 31) % 100;
-      const seed3 = (stack.id * 61 + index * 23) % 100;
+      const seed1 = (seedBase * 137 + index * 47) % 100;
+      const seed2 = (seedBase * 89 + index * 31) % 100;
+      const seed3 = (seedBase * 61 + index * 23) % 100;
       // Rotation: -8 to +8 degrees
       const rotation = (seed1 % 17) - 8;
       // Offset: -6 to +6 pixels in each direction
@@ -1389,6 +1403,7 @@ export default function App({ onBack }) {
   const [analysisStarted, setAnalysisStarted] = useState(false);
   const authToken = localStorage.getItem("auth_token") || "";
   const onboardingDriveStartedRef = useRef(false);
+  const checkedItemsRef = useRef(checkedItems);
   const stackIdRef = useRef(0);
   const workspaceRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -1412,6 +1427,10 @@ export default function App({ onBack }) {
     window.addEventListener("resize", updateToolbarOffset);
     return () => window.removeEventListener("resize", updateToolbarOffset);
   }, []);
+
+  useEffect(() => {
+    checkedItemsRef.current = checkedItems;
+  }, [checkedItems]);
 
   const buildWsUrl = useCallback(() => {
     const token = localStorage.getItem("auth_token");
@@ -1950,7 +1969,15 @@ export default function App({ onBack }) {
             x: 80 + (existingCount % 4) * 165,
             y: 80 + Math.floor(existingCount / 4) * 180,
           };
-          setStacks(s => [...s, newStack]);
+          setStacks((current) => {
+            if (!checkedItemsRef.current.includes(itemId)) {
+              return current;
+            }
+            if (current.some((stack) => stack.categoryId === itemId)) {
+              return current;
+            }
+            return [...current, newStack];
+          });
         });
         return [...prev, itemId];
       });
@@ -1967,17 +1994,25 @@ export default function App({ onBack }) {
         const item = categoryMap.get(itemId);
         if (!item) return;
         ensureCategoryPhotos(item).then((photos) => {
-          setStacks((prev) => [
-            ...prev,
-            {
-              id: ++stackIdRef.current,
-              categoryId: itemId,
-              label: item.label,
-              photos,
-              x: 80 + (index % 4) * 165,
-              y: 80 + Math.floor(index / 4) * 180,
-            },
-          ]);
+          setStacks((prev) => {
+            if (!checkedItemsRef.current.includes(itemId)) {
+              return prev;
+            }
+            if (prev.some((stack) => stack.categoryId === itemId)) {
+              return prev;
+            }
+            return [
+              ...prev,
+              {
+                id: ++stackIdRef.current,
+                categoryId: itemId,
+                label: item.label,
+                photos,
+                x: 80 + (index % 4) * 165,
+                y: 80 + Math.floor(index / 4) * 180,
+              },
+            ];
+          });
         });
       });
     }
