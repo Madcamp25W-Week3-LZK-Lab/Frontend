@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Send, MessageSquare, LayoutGrid, Layers } from "lucide-react";
-import { aiApi, boardApi, driveApi, photosApi, tagsApi } from "../../lib/api";
+import { aiApi, boardApi, driveApi, photosApi, promptsApi, tagsApi } from "../../lib/api";
 import OnboardingOverlay from "../onboarding/OnboardingOverlay.jsx";
 
 const CATEGORY_ICONS = {
@@ -1141,7 +1141,7 @@ const DriveImportModal = ({
   importTotal = 0,
 }) => {
   if (!isOpen) return null;
-  const isComplete = Boolean(driveImported);
+  const isComplete = Boolean(driveImported && importTotal > 0);
   const handlePrimary = () => {
     if (isComplete) {
       onClose?.();
@@ -1282,6 +1282,8 @@ export default function App({ onBack }) {
   const [driveImportPreview, setDriveImportPreview] = useState([]);
   const [driveImportTotal, setDriveImportTotal] = useState(0);
   const [includeSubfolders, setIncludeSubfolders] = useState(false);
+  const [aiStatus, setAiStatus] = useState({ status: "idle" });
+  const [aiError, setAiError] = useState("");
   const stackIdRef = useRef(0);
   const workspaceRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -1364,15 +1366,17 @@ export default function App({ onBack }) {
   }, [tagsSummary]);
 
   const customCategoryItems = useMemo(() => {
-    return customAlbums.map((album) => ({
-      id: `custom:${album.id}`,
-      albumId: album.id,
-      label: album.title || "사용자 정의",
-      count: categoryPhotosMap[`custom:${album.id}`]?.length || album.photo_ids?.length || album.count || 0,
-      kind: "custom",
-      tags: album.tags || [],
-      photoIds: album.photo_ids || [],
-    }));
+    return customAlbums
+      .filter((album) => !String(album.id || "").startsWith("ai-"))
+      .map((album) => ({
+        id: `custom:${album.id}`,
+        albumId: album.id,
+        label: album.title || "사용자 정의",
+        count: categoryPhotosMap[`custom:${album.id}`]?.length || album.photo_ids?.length || album.count || 0,
+        kind: "custom",
+        tags: album.tags || [],
+        photoIds: album.photo_ids || [],
+      }));
   }, [customAlbums, categoryPhotosMap]);
 
   const categoryMap = useMemo(() => {
@@ -1430,6 +1434,28 @@ export default function App({ onBack }) {
     setPeopleTags(people || []);
   }, []);
 
+  const fetchAiStatus = useCallback(async () => {
+    try {
+      const status = await aiApi.status();
+      setAiStatus(status || { status: "idle" });
+      setAiError("");
+    } catch (error) {
+      setAiError(error?.message || "AI 상태를 확인하지 못했습니다.");
+    }
+  }, []);
+
+  const startAiCategorize = useCallback(async () => {
+    setAiError("");
+    try {
+      const result = await aiApi.categorize({ force: false });
+      setAiStatus(result || { status: "queued" });
+      return result;
+    } catch (error) {
+      setAiError(error?.message || "AI 분석 요청에 실패했습니다.");
+      return null;
+    }
+  }, []);
+
   const saveBoard = useCallback(async (nextAlbums, nextPinned) => {
     const payload = {
       albums: nextAlbums,
@@ -1465,14 +1491,37 @@ export default function App({ onBack }) {
 
   const handleCreatePromptAlbum = useCallback(
     async (prompt, limit = 12) => {
-      const result = await aiApi.select(prompt, limit);
-      const photoIds = result?.photo_ids || [];
+      const created = await promptsApi.create(prompt);
+      const promptId = created?.prompt_id;
+      if (!promptId) {
+        throw new Error("AI 요청을 생성하지 못했습니다.");
+      }
+
+      const startedAt = Date.now();
+      let result;
+      while (Date.now() - startedAt < 60000) {
+        result = await promptsApi.getResult(promptId);
+        if (result?.status === "done" || result?.job_status === "done") {
+          break;
+        }
+        if (result?.status === "error" || result?.job_status === "error") {
+          throw new Error("AI 분석에 실패했습니다.");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+
+      if (!result || result?.status !== "done") {
+        throw new Error("AI 응답 시간이 초과되었습니다.");
+      }
+
+      const photoIds = result?.selected_photos || [];
       const photos = photoIds.length ? await photosApi.batch(photoIds) : [];
-      const albumId = result?.album_id || `prompt-${Date.now()}`;
+      const albumId = promptId;
+      const albumTitle = prompt;
       const album = {
         id: albumId,
-        title: result?.album_name || prompt,
-        tags: result?.tags || [],
+        title: albumTitle,
+        tags: [],
         photo_ids: photoIds,
       };
       const nextAlbums = [...customAlbums, album];
@@ -1624,13 +1673,16 @@ export default function App({ onBack }) {
           setLoadError("선택한 폴더에서 이미지를 찾지 못했습니다.");
         }
       }
+      if (hasPhotos) {
+        await startAiCategorize();
+      }
       setShowDriveModal(false);
     } catch (error) {
       setLoadError(error?.message || "드라이브 가져오기에 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
-  }, [driveAccessToken, selectedFolderId, includeSubfolders]);
+  }, [driveAccessToken, selectedFolderId, includeSubfolders, startAiCategorize]);
 
   const handleRequestDriveToken = useCallback(async () => {
     setIsLoading(true);
@@ -1838,6 +1890,30 @@ export default function App({ onBack }) {
     }
   }, [showDriveModal, driveAccessToken, handleLoadDriveFolders]);
 
+  useEffect(() => {
+    if (!driveImported) return;
+    fetchAiStatus();
+  }, [driveImported, fetchAiStatus]);
+
+  useEffect(() => {
+    if (!["queued", "running"].includes(aiStatus?.status)) return;
+    const interval = setInterval(() => {
+      fetchAiStatus();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [aiStatus?.status, fetchAiStatus]);
+
+  useEffect(() => {
+    if (aiStatus?.status !== "done") return;
+    refreshTags();
+    boardApi.get().then((board) => {
+      setBoardState({
+        albums: board?.albums || [],
+        pinned_tags: board?.pinned_tags || [],
+      });
+    });
+  }, [aiStatus?.status, refreshTags]);
+
   // Arrange stacks to grid (like phone icons)
   const handleArrangeStacks = useCallback(() => {
     const GRID_START_X = 80;
@@ -2039,10 +2115,13 @@ export default function App({ onBack }) {
             onRenamePerson={handleRenameTag}
             onUpdatePinned={handleUpdatePinned}
             onDriveStart={() => setShowDriveModal(true)}
+            onStartAnalysis={startAiCategorize}
             driveImported={driveImported}
             driveImportSummary={driveImportSummary}
             drivePreviewPhotos={allPhotos}
             resolvePhotoUrl={resolvePhotoUrl}
+            aiStatus={aiStatus}
+            aiError={aiError}
           />
         )}
       </AnimatePresence>

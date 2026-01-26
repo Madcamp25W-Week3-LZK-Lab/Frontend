@@ -9,10 +9,13 @@ export default function OnboardingOverlay({
   onRenamePerson,
   onUpdatePinned,
   onDriveStart,
+  onStartAnalysis,
   driveImported,
   driveImportSummary,
   drivePreviewPhotos = [],
   resolvePhotoUrl,
+  aiStatus,
+  aiError,
 }) {
   const [step, setStep] = useState(0);
   const [analysisMessage, setAnalysisMessage] = useState("사진을 분석하는 중...");
@@ -20,12 +23,12 @@ export default function OnboardingOverlay({
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [isExiting, setIsExiting] = useState(false);
 
-  // Step 1: Analysis messages rotation
+  // Step 1: Analysis messages rotation (until AI finishes)
   useEffect(() => {
     if (step !== 1) return;
 
     const messages = [
-      "사진 12,403장을 분석 중입니다...",
+      "사진을 분석하는 중...",
       "인물을 식별하는 중입니다...",
       "객체를 분류하는 중입니다...",
       "카테고리를 정리하는 중입니다...",
@@ -35,18 +38,22 @@ export default function OnboardingOverlay({
     const messageInterval = setInterval(() => {
       index = (index + 1) % messages.length;
       setAnalysisMessage(messages[index]);
-    }, 800);
-
-    const timer = setTimeout(() => {
-      clearInterval(messageInterval);
-      setStep(2);
-    }, 3000);
+    }, 900);
 
     return () => {
       clearInterval(messageInterval);
-      clearTimeout(timer);
     };
   }, [step]);
+
+  useEffect(() => {
+    if (step !== 1) return;
+    if (aiStatus?.status === "done") {
+      setStep(2);
+    }
+    if (aiStatus?.status === "error" && aiError) {
+      setAnalysisMessage(`분석에 실패했습니다: ${aiError}`);
+    }
+  }, [step, aiStatus, aiError]);
 
   useEffect(() => {
     setFaces(people);
@@ -74,6 +81,11 @@ export default function OnboardingOverlay({
       onUpdatePinned?.(selectedInterests);
       onComplete?.();
     }, 600);
+  };
+
+  const handleStartAnalysis = () => {
+    onStartAnalysis?.();
+    setStep(1);
   };
 
   return (
@@ -123,7 +135,7 @@ export default function OnboardingOverlay({
             <button className="onboarding-next" onClick={onDriveStart}>
               Drive 연동 팝업 열기
             </button>
-            <button className="onboarding-next" onClick={() => setStep(1)} disabled={!driveImported}>
+            <button className="onboarding-next" onClick={handleStartAnalysis} disabled={!driveImported}>
               다음
             </button>
           </div>

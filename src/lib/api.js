@@ -91,10 +91,17 @@ export const photosApi = {
 };
 
 export const aiApi = {
+  status: () => apiFetch("/ai/status"),
+  categorize: (payload = {}) => apiFetch("/ai/categorize", { method: "POST", body: payload }),
   select: (prompt, limit = 5) =>
     apiFetch("/ai/select", { method: "POST", body: { prompt, limit } }),
   mockSync: (payload = {}) => apiFetch("/ai/mock/sync", { method: "POST", body: payload }),
   mockAlbums: (payload = {}) => apiFetch("/ai/mock/albums", { method: "POST", body: payload }),
+};
+
+export const promptsApi = {
+  create: (text) => apiFetch("/prompts", { method: "POST", body: { text } }),
+  getResult: (promptId) => apiFetch(`/prompts/${promptId}/result`),
 };
 
 export const boardApi = {
