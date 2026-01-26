@@ -1671,6 +1671,42 @@ body {
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
 }
 
+.photo-viewer-media {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-viewer-detections {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.photo-viewer-box {
+  position: absolute;
+  border: 2px solid rgba(76, 110, 255, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.photo-viewer-box--person {
+  border-color: rgba(16, 185, 129, 0.95);
+}
+
+.photo-viewer-box-label {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
 .photo-viewer-nav {
   position: absolute;
   top: 50%;
@@ -1740,6 +1776,25 @@ body {
   color: rgba(255, 255, 255, 0.8);
   font-size: 14px;
   font-weight: 500;
+}
+
+.photo-viewer-toggle {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.photo-viewer-toggle:hover {
+  background: #fff;
 }
 
 /* ========================================
@@ -1972,6 +2027,15 @@ body {
   font-size: 13px;
 }
 
+.drive-modal-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
 .drive-modal-btn {
   width: 100%;
   padding: 10px 12px;
@@ -1996,6 +2060,28 @@ body {
   background: #f3f4f6;
   padding: 6px 10px;
   font-size: 12px;
+}
+
+.drive-modal-summary {
+  font-size: 12px;
+  color: #4b5563;
+  margin: 6px 0 10px;
+}
+
+.drive-modal-preview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.drive-modal-thumb {
+  width: 100%;
+  padding-bottom: 100%;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .drive-modal-close {

@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { authApi } from "../../lib/api";
 import "./LandingPage.css";
 
-export default function LandingPage({ onLogin }) {
-    const [showAuthModal, setShowAuthModal] = useState(false);
+export default function LandingPage({ onLogin, initialAuthOpen = false }) {
+    const [showAuthModal, setShowAuthModal] = useState(initialAuthOpen);
     const [isLoginMode, setIsLoginMode] = useState(true);
     const [authError, setAuthError] = useState("");
     const [email, setEmail] = useState("");

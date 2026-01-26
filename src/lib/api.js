@@ -78,16 +78,23 @@ export const photosApi = {
   },
   batch: (photoIds) =>
     apiFetch("/photos/batch", { method: "POST", body: { photo_ids: photoIds } }),
-  importDrive: (accessToken, folderId) =>
+  getDetections: (photoId) => apiFetch(`/photos/${photoId}/detections`),
+  importDrive: (accessToken, folderId, includeSubfolders = true) =>
     apiFetch("/photos/import/google-drive", {
       method: "POST",
-      body: { access_token: accessToken, folder_id: folderId || null },
+      body: {
+        access_token: accessToken,
+        folder_id: folderId || null,
+        include_subfolders: includeSubfolders,
+      },
     }),
 };
 
 export const aiApi = {
   select: (prompt, limit = 5) =>
     apiFetch("/ai/select", { method: "POST", body: { prompt, limit } }),
+  mockSync: (payload = {}) => apiFetch("/ai/mock/sync", { method: "POST", body: payload }),
+  mockAlbums: (payload = {}) => apiFetch("/ai/mock/albums", { method: "POST", body: payload }),
 };
 
 export const boardApi = {
@@ -96,9 +103,13 @@ export const boardApi = {
 };
 
 export const driveApi = {
-  listFolders: (accessToken, parentId) =>
+  listFolders: (accessToken, parentId, includeSubfolders = true) =>
     apiFetch("/drive/folders", {
       method: "POST",
-      body: { access_token: accessToken, parent_id: parentId || null },
+      body: {
+        access_token: accessToken,
+        parent_id: parentId || null,
+        include_subfolders: includeSubfolders,
+      },
     }),
 };

@@ -498,6 +498,10 @@ const getGridClass = (count) => {
 // Photo Viewer Lightbox Component
 const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
   const currentIndex = photos.findIndex((item) => item.id === photo?.id);
+  const [detections, setDetections] = useState([]);
+  const [showDetections, setShowDetections] = useState(false);
+  const [imageSize, setImageSize] = useState({ w: 0, h: 0, cw: 0, ch: 0 });
+  const imgRef = useRef(null);
 
   const handlePrev = (e) => {
     e.stopPropagation();
@@ -524,6 +528,87 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, photos, onClose, onNavigate]);
 
+  useEffect(() => {
+    let isActive = true;
+    if (!photo?.id) {
+      setDetections([]);
+      return () => {};
+    }
+    photosApi.getDetections(photo.id)
+      .then((res) => {
+        if (isActive) {
+          setDetections(res?.detections || []);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setDetections([]);
+        }
+      });
+    return () => {
+      isActive = false;
+    };
+  }, [photo?.id]);
+
+  const handleImageLoad = () => {
+    const img = imgRef.current;
+    if (!img) return;
+    setImageSize({
+      w: img.naturalWidth || 0,
+      h: img.naturalHeight || 0,
+      cw: img.clientWidth || 0,
+      ch: img.clientHeight || 0,
+    });
+  };
+
+  const mapDetection = (det) => {
+    if (!det?.bbox) return null;
+    const normalized = det.normalized === true;
+    const format = det.bbox_format || (det.bbox?.x1 !== undefined ? "xyxy" : "xywh");
+    let x1;
+    let y1;
+    let x2;
+    let y2;
+
+    if (format === "xyxy") {
+      x1 = det.bbox.x1;
+      y1 = det.bbox.y1;
+      x2 = det.bbox.x2;
+      y2 = det.bbox.y2;
+    } else {
+      x1 = det.bbox.x;
+      y1 = det.bbox.y;
+      x2 = x1 + det.bbox.w;
+      y2 = y1 + det.bbox.h;
+    }
+
+    if ([x1, y1, x2, y2].some((v) => typeof v !== "number")) {
+      return null;
+    }
+
+    const baseW = imageSize.w || 1;
+    const baseH = imageSize.h || 1;
+    if (normalized) {
+      x1 *= baseW;
+      x2 *= baseW;
+      y1 *= baseH;
+      y2 *= baseH;
+    }
+
+    const scaleX = (imageSize.cw || 1) / baseW;
+    const scaleY = (imageSize.ch || 1) / baseH;
+
+    return {
+      x: x1 * scaleX,
+      y: y1 * scaleY,
+      w: (x2 - x1) * scaleX,
+      h: (y2 - y1) * scaleY,
+      label: det.person_tag || det.label || det.type || "",
+      type: det.type || "object",
+      confidence: det.confidence,
+    };
+  };
+
   return (
     <motion.div
       className="photo-viewer-overlay"
@@ -540,15 +625,42 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
       )}
 
       {/* Photo */}
-      <motion.img
-        src={resolvePhotoUrl(photo)}
-        alt=""
-        className="photo-viewer-image"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        onClick={(e) => e.stopPropagation()}
-      />
+      <div className="photo-viewer-media" onClick={(e) => e.stopPropagation()}>
+        <motion.img
+          ref={imgRef}
+          src={resolvePhotoUrl(photo)}
+          alt=""
+          className="photo-viewer-image"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          onLoad={handleImageLoad}
+        />
+        {showDetections && detections.length > 0 && (
+          <div className="photo-viewer-detections">
+            {detections.map((det, index) => {
+              const box = mapDetection(det);
+              if (!box) return null;
+              return (
+                <div
+                  key={`${det.label || det.type}-${index}`}
+                  className={`photo-viewer-box photo-viewer-box--${box.type}`}
+                  style={{
+                    left: `${box.x}px`,
+                    top: `${box.y}px`,
+                    width: `${box.w}px`,
+                    height: `${box.h}px`,
+                  }}
+                >
+                  <span className="photo-viewer-box-label">
+                    {box.label || box.type}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Navigation - Right */}
       {currentIndex < photos.length - 1 && (
@@ -561,6 +673,18 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
       <div className="photo-viewer-counter">
         {currentIndex + 1} / {photos.length}
       </div>
+
+      {detections.length > 0 && (
+        <button
+          className="photo-viewer-toggle"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDetections((prev) => !prev);
+          }}
+        >
+          {showDetections ? "박스 숨기기" : "박스 보기"}
+        </button>
+      )}
 
       {/* Close Button */}
       <button className="photo-viewer-close" onClick={onClose}>✕</button>
@@ -1285,6 +1409,10 @@ const DriveImportModal = ({
   onImport,
   isBusy,
   error,
+  importSummary,
+  importPreview = [],
+  includeSubfolders,
+  onToggleIncludeSubfolders,
 }) => {
   if (!isOpen) return null;
 
@@ -1304,7 +1432,7 @@ const DriveImportModal = ({
       >
         <h3>Google Drive 가져오기</h3>
         <p className="drive-modal-desc">
-          가져올 폴더를 선택하세요. 선택하지 않으면 전체 이미지를 가져옵니다.
+          폴더를 선택하면 하위 폴더까지 모두 검색해서 가져옵니다.
         </p>
 
         {!accessToken ? (
@@ -1323,7 +1451,7 @@ const DriveImportModal = ({
                 <option value="">전체</option>
                 {folders.map((folder) => (
                   <option key={folder.id} value={folder.id}>
-                    {folder.name}
+                    {folder.path || `${"—".repeat(folder.depth || 0)} ${folder.name}`}
                   </option>
                 ))}
               </select>
@@ -1331,12 +1459,34 @@ const DriveImportModal = ({
                 새로고침
               </button>
             </div>
+            <label className="drive-modal-checkbox">
+              <input
+                type="checkbox"
+                checked={includeSubfolders}
+                onChange={(e) => onToggleIncludeSubfolders?.(e.target.checked)}
+              />
+              하위 폴더 포함
+            </label>
             <button className="drive-modal-btn" onClick={onImport} disabled={isBusy}>
               가져오기
             </button>
           </>
         )}
 
+        {importSummary && (
+          <p className="drive-modal-summary">{importSummary}</p>
+        )}
+        {importPreview.length > 0 && (
+          <div className="drive-modal-preview">
+            {importPreview.slice(0, 8).map((photo) => (
+              <div
+                key={photo.id}
+                className="drive-modal-thumb"
+                style={{ backgroundImage: `url(${photo.thumbnail_url || photo.original_url})` }}
+              />
+            ))}
+          </div>
+        )}
         {error && <p className="auth-error">{error}</p>}
         <button className="drive-modal-close" onClick={onClose}>
           닫기
@@ -1374,6 +1524,9 @@ export default function App({ onBack }) {
   const [selectedFolderId, setSelectedFolderId] = useState("");
   const [driveImported, setDriveImported] = useState(false);
   const [driveImportSummary, setDriveImportSummary] = useState("");
+  const [driveImportPreview, setDriveImportPreview] = useState([]);
+  const [driveImportTotal, setDriveImportTotal] = useState(0);
+  const [includeSubfolders, setIncludeSubfolders] = useState(false);
   const stackIdRef = useRef(0);
   const workspaceRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -1630,6 +1783,17 @@ export default function App({ onBack }) {
   const handleUpdatePinned = useCallback(
     async (nextPinned) => {
       await saveBoard(customAlbums, nextPinned);
+      try {
+        await aiApi.mockAlbums({ mode: "person", save_to_board: true });
+        await aiApi.mockAlbums({ mode: "object", save_to_board: true });
+        const board = await boardApi.get();
+        setBoardState({
+          albums: board?.albums || [],
+          pinned_tags: board?.pinned_tags || [],
+        });
+      } catch (error) {
+        console.warn("Failed to sync AI albums", error);
+      }
     },
     [customAlbums, saveBoard]
   );
@@ -1668,7 +1832,7 @@ export default function App({ onBack }) {
     setIsLoading(true);
     setLoadError("");
     try {
-      const data = await driveApi.listFolders(driveAccessToken);
+      const data = await driveApi.listFolders(driveAccessToken, null, includeSubfolders);
       setDriveFolders(data?.folders || []);
     } catch (error) {
       setLoadError(error?.message || "폴더를 불러오지 못했습니다.");
@@ -1682,7 +1846,7 @@ export default function App({ onBack }) {
     setIsLoading(true);
     setLoadError("");
     try {
-      const result = await photosApi.importDrive(driveAccessToken, selectedFolderId);
+      const result = await photosApi.importDrive(driveAccessToken, selectedFolderId, includeSubfolders);
       const [photos, tags, people] = await Promise.all([
         photosApi.listAll(),
         tagsApi.listSummary(),
@@ -1697,7 +1861,10 @@ export default function App({ onBack }) {
       if (result) {
         const imported = result.imported ?? 0;
         const skipped = result.skipped ?? 0;
-        setDriveImportSummary(`새로 ${imported}장, 기존 ${skipped}장`);
+        const totalFound = imported + skipped;
+        setDriveImportSummary(`총 ${totalFound}장 · 신규 ${imported}장, 기존 ${skipped}장`);
+        setDriveImportPreview(result.preview || []);
+        setDriveImportTotal(totalFound);
         if (!hasPhotos) {
           setLoadError("선택한 폴더에서 이미지를 찾지 못했습니다.");
         }
@@ -1708,7 +1875,7 @@ export default function App({ onBack }) {
     } finally {
       setIsLoading(false);
     }
-  }, [driveAccessToken, selectedFolderId]);
+  }, [driveAccessToken, selectedFolderId, includeSubfolders]);
 
   const handleRequestDriveToken = useCallback(async () => {
     setIsLoading(true);
@@ -2139,6 +2306,10 @@ export default function App({ onBack }) {
             onImport={handleImportDrive}
             isBusy={isLoading}
             error={loadError}
+            importSummary={driveImportSummary}
+            importPreview={driveImportPreview}
+            includeSubfolders={includeSubfolders}
+            onToggleIncludeSubfolders={setIncludeSubfolders}
           />
         )}
       </AnimatePresence>
