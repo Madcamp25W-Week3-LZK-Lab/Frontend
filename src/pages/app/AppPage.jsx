@@ -20,6 +20,29 @@ const resolvePhotoUrl = (photo) =>
   photo?.drive?.original_url ||
   "";
 
+const resolveFullPhotoUrl = (photo) =>
+  photo?.original_url ||
+  photo?.drive?.original_url ||
+  photo?.thumbnail_url ||
+  photo?.thumbnailLink ||
+  photo?.drive?.thumbnail_url ||
+  photo?.drive?.thumbnailLink ||
+  "";
+
+const resolveOriginalProxyUrl = (photo, accessToken, authToken) => {
+  if (!photo?.id) return "";
+  const apiBase = import.meta.env.VITE_API_BASE || "/api";
+  const params = new URLSearchParams();
+  if (accessToken) {
+    params.set("access_token", accessToken);
+  }
+  if (authToken) {
+    params.set("auth_token", authToken);
+  }
+  const query = params.toString();
+  return `${apiBase}/photos/${photo.id}/original${query ? `?${query}` : ""}`;
+};
+
 // New Category Modal Component
 const NewCategoryModal = ({ isOpen, onClose, onCreate }) => {
   const [query, setQuery] = useState('');
@@ -220,11 +243,23 @@ const getGridClass = (count) => {
 };
 
 // Photo Viewer Lightbox Component
-const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
+const PhotoViewer = ({
+  photo,
+  photos,
+  onClose,
+  onNavigate,
+  showDetectionsDefault,
+  onToggleDetections,
+  driveAccessToken,
+  authToken,
+}) => {
   const currentIndex = photos.findIndex((item) => item.id === photo?.id);
   const [detections, setDetections] = useState([]);
   const [showDetections, setShowDetections] = useState(false);
   const [imageSize, setImageSize] = useState({ w: 0, h: 0, cw: 0, ch: 0 });
+  const [imageSrc, setImageSrc] = useState(() =>
+    resolveOriginalProxyUrl(photo, driveAccessToken, authToken)
+  );
   const imgRef = useRef(null);
 
   const handlePrev = (e) => {
@@ -274,16 +309,40 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
     };
   }, [photo?.id]);
 
-  const handleImageLoad = () => {
+  useEffect(() => {
+    const proxyUrl = resolveOriginalProxyUrl(photo, driveAccessToken, authToken);
+    setImageSrc(proxyUrl || resolvePhotoUrl(photo));
+  }, [photo?.id, driveAccessToken, authToken]);
+
+  useEffect(() => {
+    if (typeof showDetectionsDefault === "boolean") {
+      setShowDetections(showDetectionsDefault);
+    }
+  }, [showDetectionsDefault, photo?.id]);
+
+  const updateImageSize = useCallback(() => {
     const img = imgRef.current;
     if (!img) return;
+    const rect = img.getBoundingClientRect();
     setImageSize({
       w: img.naturalWidth || 0,
       h: img.naturalHeight || 0,
-      cw: img.clientWidth || 0,
-      ch: img.clientHeight || 0,
+      cw: rect.width || 0,
+      ch: rect.height || 0,
     });
+  }, []);
+
+  const handleImageLoad = () => {
+    updateImageSize();
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      updateImageSize();
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [updateImageSize, photo?.id]);
 
   const mapDetection = (det) => {
     if (!det?.bbox) return null;
@@ -310,8 +369,11 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
       return null;
     }
 
-    const baseW = imageSize.w || 1;
-    const baseH = imageSize.h || 1;
+    if (!imageSize.w || !imageSize.h || !imageSize.cw || !imageSize.ch) {
+      return null;
+    }
+    const baseW = imageSize.w;
+    const baseH = imageSize.h;
     if (normalized) {
       x1 *= baseW;
       x2 *= baseW;
@@ -333,6 +395,12 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
     };
   };
 
+  const formatConfidence = (value) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return null;
+    const percent = Math.round(value * 100);
+    return `${percent}%`;
+  };
+
   return (
     <motion.div
       className="photo-viewer-overlay"
@@ -352,13 +420,20 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
       <div className="photo-viewer-media" onClick={(e) => e.stopPropagation()}>
         <motion.img
           ref={imgRef}
-          src={resolvePhotoUrl(photo)}
+          src={imageSrc}
           alt=""
           className="photo-viewer-image"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
           onLoad={handleImageLoad}
+          onAnimationComplete={updateImageSize}
+          onError={() => {
+            const fallback = resolvePhotoUrl(photo);
+            if (fallback && fallback !== imageSrc) {
+              setImageSrc(fallback);
+            }
+          }}
         />
         {showDetections && detections.length > 0 && (
           <div className="photo-viewer-detections">
@@ -378,6 +453,9 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
                 >
                   <span className="photo-viewer-box-label">
                     {box.label || box.type}
+                    {formatConfidence(box.confidence)
+                      ? ` · ${formatConfidence(box.confidence)}`
+                      : ""}
                   </span>
                 </div>
               );
@@ -403,7 +481,9 @@ const PhotoViewer = ({ photo, photos, onClose, onNavigate }) => {
           className="photo-viewer-toggle"
           onClick={(e) => {
             e.stopPropagation();
-            setShowDetections((prev) => !prev);
+            const next = !showDetections;
+            setShowDetections(next);
+            onToggleDetections?.(next);
           }}
         >
           {showDetections ? "박스 숨기기" : "박스 보기"}
@@ -1029,7 +1109,7 @@ const CategoryPanel = ({
 };
 
 // Chat Panel Component - Professional Redesign
-const ChatPanel = ({ isOpen, onToggle, onPrompt }) => {
+const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -1050,7 +1130,11 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt }) => {
       if (result?.count !== undefined) {
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", text: `"${result.label}" 결과 ${result.count}장 발견되었습니다.` },
+          {
+            role: "assistant",
+            text: `"${result.label}" 결과 ${result.count}장 발견되었습니다.`,
+            photos: result.photos || [],
+          },
         ]);
       }
     } catch (error) {
@@ -1098,6 +1182,19 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt }) => {
             {messages.map((msg, i) => (
               <div key={i} className={`chat-message chat-message--${msg.role}`}>
                 {msg.text}
+                {msg.photos?.length > 0 && (
+                  <div className="chat-photo-grid">
+                    {msg.photos.map((photo) => (
+                      <button
+                        key={photo.id}
+                        type="button"
+                        className="chat-photo-thumb"
+                        style={{ backgroundImage: `url(${resolvePhotoUrl(photo)})` }}
+                        onClick={() => onPhotoClick?.(photo)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1284,10 +1381,15 @@ export default function App({ onBack }) {
   const [includeSubfolders, setIncludeSubfolders] = useState(false);
   const [aiStatus, setAiStatus] = useState({ status: "idle" });
   const [aiError, setAiError] = useState("");
+  const [showDetectionBoxes, setShowDetectionBoxes] = useState(false);
+  const authToken = localStorage.getItem("auth_token") || "";
   const stackIdRef = useRef(0);
   const workspaceRef = useRef(null);
   const toolbarRef = useRef(null);
   const driveTokenClientRef = useRef(null);
+  const wsRef = useRef(null);
+  const wsConnectedRef = useRef(false);
+  const pendingPromptRef = useRef(new Map());
 
   useEffect(() => {
     const toolbarGap = 10;
@@ -1304,6 +1406,86 @@ export default function App({ onBack }) {
     window.addEventListener("resize", updateToolbarOffset);
     return () => window.removeEventListener("resize", updateToolbarOffset);
   }, []);
+
+  const buildWsUrl = useCallback(() => {
+    const token = localStorage.getItem("auth_token");
+    if (!token) return null;
+    const apiBase = import.meta.env.VITE_API_BASE || "/api";
+    const encoded = encodeURIComponent(token);
+
+    if (apiBase.startsWith("http")) {
+      const url = new URL(apiBase);
+      const wsProtocol = url.protocol === "https:" ? "wss:" : "ws:";
+      const path = url.pathname.replace(/\/$/, "");
+      return `${wsProtocol}//${url.host}${path}/ws?token=${encoded}`;
+    }
+
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const path = apiBase.replace(/\/$/, "");
+    return `${wsProtocol}//${window.location.host}${path}/ws?token=${encoded}`;
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+    let reconnectTimer;
+
+    const connect = () => {
+      const wsUrl = buildWsUrl();
+      if (!wsUrl) return;
+
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        wsConnectedRef.current = true;
+      };
+
+      ws.onmessage = (event) => {
+        let payload;
+        try {
+          payload = JSON.parse(event.data);
+        } catch (error) {
+          return;
+        }
+
+        if (!payload?.prompt_id) return;
+        const entry = pendingPromptRef.current.get(payload.prompt_id);
+        if (!entry) return;
+
+        if (payload.type === "prompt_error") {
+          entry.reject(new Error(payload.error || "AI 분석에 실패했습니다."));
+        } else if (payload.type === "prompt_done") {
+          entry.resolve(payload);
+        }
+        pendingPromptRef.current.delete(payload.prompt_id);
+      };
+
+      ws.onclose = () => {
+        wsConnectedRef.current = false;
+        if (isActive) {
+          reconnectTimer = setTimeout(connect, 2000);
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    };
+
+    connect();
+
+    return () => {
+      isActive = false;
+      wsConnectedRef.current = false;
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [buildWsUrl]);
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -1497,21 +1679,41 @@ export default function App({ onBack }) {
         throw new Error("AI 요청을 생성하지 못했습니다.");
       }
 
-      const startedAt = Date.now();
       let result;
-      while (Date.now() - startedAt < 60000) {
-        result = await promptsApi.getResult(promptId);
-        if (result?.status === "done" || result?.job_status === "done") {
-          break;
-        }
-        if (result?.status === "error" || result?.job_status === "error") {
-          throw new Error("AI 분석에 실패했습니다.");
-        }
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
+      if (wsConnectedRef.current) {
+        result = await new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            pendingPromptRef.current.delete(promptId);
+            reject(new Error("AI 응답 시간이 초과되었습니다."));
+          }, 60000);
 
-      if (!result || result?.status !== "done") {
-        throw new Error("AI 응답 시간이 초과되었습니다.");
+          pendingPromptRef.current.set(promptId, {
+            resolve: (payload) => {
+              clearTimeout(timeoutId);
+              resolve(payload);
+            },
+            reject: (error) => {
+              clearTimeout(timeoutId);
+              reject(error);
+            },
+          });
+        });
+      } else {
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < 60000) {
+          result = await promptsApi.getResult(promptId);
+          if (result?.status === "done" || result?.job_status === "done") {
+            break;
+          }
+          if (result?.status === "error" || result?.job_status === "error") {
+            throw new Error("AI 분석에 실패했습니다.");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+
+        if (!result || result?.status !== "done") {
+          throw new Error("AI 응답 시간이 초과되었습니다.");
+        }
       }
 
       const photoIds = result?.selected_photos || [];
@@ -2031,8 +2233,17 @@ export default function App({ onBack }) {
               캔버스
             </button>
           </div>
-          <div className="item-count">
-            {filteredPhotos.length}개의 항목
+          <div className="item-count-block">
+            <div className="item-count">
+              {filteredPhotos.length}개의 항목
+            </div>
+            <button
+              className="item-count-toggle"
+              onClick={() => setShowDetectionBoxes((prev) => !prev)}
+              type="button"
+            >
+              {showDetectionBoxes ? "박스 숨기기" : "박스 보기"}
+            </button>
           </div>
 
           {viewMode === 'canvas' && (
@@ -2082,6 +2293,7 @@ export default function App({ onBack }) {
         isOpen={rightPanelOpen}
         onToggle={() => setRightPanelOpen(!rightPanelOpen)}
         onPrompt={handleCreatePromptAlbum}
+        onPhotoClick={setViewerPhoto}
       />
 
       {/* Photo Viewer Lightbox */}
@@ -2092,6 +2304,10 @@ export default function App({ onBack }) {
             photos={filteredPhotos}
             onClose={() => setViewerPhoto(null)}
             onNavigate={setViewerPhoto}
+            showDetectionsDefault={showDetectionBoxes}
+            onToggleDetections={setShowDetectionBoxes}
+            driveAccessToken={driveAccessToken}
+            authToken={authToken}
           />
         )}
       </AnimatePresence>
