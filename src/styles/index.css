@@ -343,6 +343,28 @@ body {
   color: #007aff;
 }
 
+.category-item-input {
+  flex: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  margin-right: 8px;
+}
+
+.category-item-delete {
+  border: none;
+  background: transparent;
+  color: #c7c7cc;
+  font-size: 14px;
+  margin-right: 6px;
+  cursor: pointer;
+}
+
+.category-item-delete:hover {
+  color: #ff3b30;
+}
+
 /* Add Button - Ghost style */
 .add-category-btn {
   display: flex;
@@ -548,6 +570,16 @@ body {
 .workspace-empty-hint {
   font-size: 13px !important;
   color: #aeaeb2 !important;
+}
+
+.workspace-error {
+  margin: 16px;
+  padding: 10px 14px;
+  background: #fff4f4;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 13px;
 }
 
 /* ========================================
@@ -1379,6 +1411,22 @@ body {
   margin-bottom: 32px;
 }
 
+.onboarding-drive-preview {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+  justify-content: center;
+}
+
+.onboarding-drive-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.2);
+}
+
 /* Step 1: Analysis */
 .onboarding-analysis {
   padding: 40px 0;
@@ -1623,6 +1671,42 @@ body {
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
 }
 
+.photo-viewer-media {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-viewer-detections {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.photo-viewer-box {
+  position: absolute;
+  border: 2px solid rgba(76, 110, 255, 0.95);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.photo-viewer-box--person {
+  border-color: rgba(16, 185, 129, 0.95);
+}
+
+.photo-viewer-box-label {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
 .photo-viewer-nav {
   position: absolute;
   top: 50%;
@@ -1692,6 +1776,25 @@ body {
   color: rgba(255, 255, 255, 0.8);
   font-size: 14px;
   font-weight: 500;
+}
+
+.photo-viewer-toggle {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.photo-viewer-toggle:hover {
+  background: #fff;
 }
 
 /* ========================================
@@ -1878,4 +1981,113 @@ body {
   color: #aeaeb2;
   margin-left: auto;
   margin-right: 8px;
+}
+
+.drive-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.drive-modal {
+  width: min(480px, 92vw);
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.drive-modal-desc {
+  color: #6b7280;
+  font-size: 13px;
+  margin: 6px 0 16px;
+}
+
+.drive-modal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.drive-modal-row label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.drive-modal-row select {
+  flex: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.drive-modal-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #374151;
+  margin-bottom: 10px;
+}
+
+.drive-modal-btn {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: none;
+  background: #111827;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.drive-modal-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.drive-modal-refresh {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #f3f4f6;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.drive-modal-summary {
+  font-size: 12px;
+  color: #4b5563;
+  margin: 6px 0 10px;
+}
+
+.drive-modal-preview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.drive-modal-thumb {
+  width: 100%;
+  padding-bottom: 100%;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.drive-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
 }
