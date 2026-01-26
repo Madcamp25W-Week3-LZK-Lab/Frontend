@@ -254,6 +254,39 @@ const getStackSeed = (id) => {
   return 0;
 };
 
+const getCategoryIds = (stack) => {
+  if (Array.isArray(stack?.categoryIds) && stack.categoryIds.length > 0) {
+    return stack.categoryIds;
+  }
+  if (stack?.categoryId) {
+    return [stack.categoryId];
+  }
+  return [];
+};
+
+const getCategoryLabels = (stack) => {
+  if (Array.isArray(stack?.categoryLabels) && stack.categoryLabels.length > 0) {
+    return stack.categoryLabels;
+  }
+  if (stack?.label) {
+    return [stack.label];
+  }
+  return [];
+};
+
+const buildCategoryKey = (categoryIds) => {
+  return categoryIds.slice().sort().join("|");
+};
+
+const sameCategorySet = (a, b) => {
+  if (a.length !== b.length) return false;
+  const setA = new Set(a);
+  for (const id of b) {
+    if (!setA.has(id)) return false;
+  }
+  return true;
+};
+
 // Photo Viewer Lightbox Component
 const PhotoViewer = ({
   photo,
@@ -396,14 +429,23 @@ const PhotoViewer = ({
       y2 *= baseH;
     }
 
-    const scaleX = (imageSize.cw || 1) / baseW;
-    const scaleY = (imageSize.ch || 1) / baseH;
+    const scale = Math.min(
+      (imageSize.cw || 1) / baseW,
+      (imageSize.ch || 1) / baseH
+    );
+    if (!Number.isFinite(scale) || scale <= 0) {
+      return null;
+    }
+    const renderedW = baseW * scale;
+    const renderedH = baseH * scale;
+    const offsetX = ((imageSize.cw || 0) - renderedW) / 2;
+    const offsetY = ((imageSize.ch || 0) - renderedH) / 2;
 
     return {
-      x: x1 * scaleX,
-      y: y1 * scaleY,
-      w: (x2 - x1) * scaleX,
-      h: (y2 - y1) * scaleY,
+      x: x1 * scale + offsetX,
+      y: y1 * scale + offsetY,
+      w: (x2 - x1) * scale,
+      h: (y2 - y1) * scale,
       label: det.person_tag || det.label || det.type || "",
       type: det.type || "object",
       confidence: det.confidence,
@@ -599,7 +641,9 @@ const ExpandedFolder = ({ stack, onClose, onPhotoClick, onMove }) => {
     >
       {/* Minimal header */}
       <div className="folder-expanded-header">
-        <span className="folder-expanded-label">{stack?.label}</span>
+        {getCategoryIds(stack).length <= 1 && (
+          <span className="folder-expanded-label">{stack?.label}</span>
+        )}
         <span className="folder-expanded-count">{photos.length}장</span>
         <button
           className="folder-expanded-close"
@@ -1412,6 +1456,20 @@ export default function App({ onBack }) {
   const wsConnectedRef = useRef(false);
   const pendingPromptRef = useRef(new Map());
 
+  const getCanvasOrigin = useCallback(() => {
+    const defaultOrigin = { x: 80, y: 80 };
+    if (!workspaceRef.current) return defaultOrigin;
+    const workspaceRect = workspaceRef.current.getBoundingClientRect();
+    const panel = document.querySelector(".category-panel");
+    if (!panel || !panel.classList.contains("category-panel--open")) {
+      return defaultOrigin;
+    }
+    const panelRect = panel.getBoundingClientRect();
+    const overlap = panelRect.right - workspaceRect.left;
+    if (overlap <= 0) return defaultOrigin;
+    return { x: Math.max(defaultOrigin.x, overlap + 24), y: defaultOrigin.y };
+  }, [leftPanelOpen]);
+
   useEffect(() => {
     const toolbarGap = 10;
 
@@ -1960,14 +2018,17 @@ export default function App({ onBack }) {
         }
 
         const existingCount = prev.length;
+        const origin = getCanvasOrigin();
         ensureCategoryPhotos(item).then((photos) => {
           const newStack = {
             id: ++stackIdRef.current,
             categoryId: itemId,
+            categoryIds: [itemId],
+            categoryLabels: [label],
             label: label,
             photos,
-            x: 80 + (existingCount % 4) * 165,
-            y: 80 + Math.floor(existingCount / 4) * 180,
+            x: origin.x + (existingCount % 4) * 165,
+            y: origin.y + Math.floor(existingCount / 4) * 180,
           };
           setStacks((current) => {
             if (!checkedItemsRef.current.includes(itemId)) {
@@ -1993,6 +2054,7 @@ export default function App({ onBack }) {
       checkedItems.forEach((itemId, index) => {
         const item = categoryMap.get(itemId);
         if (!item) return;
+        const origin = getCanvasOrigin();
         ensureCategoryPhotos(item).then((photos) => {
           setStacks((prev) => {
             if (!checkedItemsRef.current.includes(itemId)) {
@@ -2006,10 +2068,12 @@ export default function App({ onBack }) {
               {
                 id: ++stackIdRef.current,
                 categoryId: itemId,
+                categoryIds: [itemId],
+                categoryLabels: [item.label],
                 label: item.label,
                 photos,
-                x: 80 + (index % 4) * 165,
-                y: 80 + Math.floor(index / 4) * 180,
+                x: origin.x + (index % 4) * 165,
+                y: origin.y + Math.floor(index / 4) * 180,
               },
             ];
           });
@@ -2053,21 +2117,13 @@ export default function App({ onBack }) {
     setExpandedStacks(prev => prev.map(s => (s.id === stackId ? { ...s, x: nextX, y: nextY } : s)));
   }, []);
 
-  const handlePositionChange = useCallback((stackId, newX, newY, isDragging) => {
-    setStacks(prev => prev.map(s =>
-      s.id === stackId ? { ...s, x: newX, y: newY } : s
-    ));
-
-    if (!isDragging) return;
-
-    const draggedStack = stacks.find(s => s.id === stackId);
-    if (!draggedStack) return;
-
+  const updateIntersectionPreview = useCallback((draggedStack, newX, newY) => {
+    const allStacks = [...stacks, ...intersectionStacks];
     let closestStack = null;
     let minDistance = Infinity;
 
-    stacks.forEach(other => {
-      if (other.id === stackId) return;
+    allStacks.forEach((other) => {
+      if (other.id === draggedStack.id) return;
       const dx = newX - other.x;
       const dy = newY - other.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
@@ -2078,39 +2134,87 @@ export default function App({ onBack }) {
       }
     });
 
-    if (closestStack) {
-      setMagneticStackIds([stackId, closestStack.id]);
-
-      const intersectionId = `${draggedStack.categoryId}-${closestStack.categoryId}`;
-      const reverseId = `${closestStack.categoryId}-${draggedStack.categoryId}`;
-
-      const exists = intersectionStacks.some(i =>
-        i.id === intersectionId || i.id === reverseId
-      );
-
-      if (!exists) {
-        const commonPhotos = getIntersection(draggedStack.photos, closestStack.photos);
-        if (commonPhotos.length > 0) {
-          setPreviewIntersection({
-            id: intersectionId,
-            label: `${draggedStack.label} X ${closestStack.label}`,
-            photos: commonPhotos,
-            x: (newX + closestStack.x) / 2,
-            y: Math.min(newY, closestStack.y) - 180,
-            sourceId: stackId,
-            targetId: closestStack.id,
-          });
-        } else {
-          setPreviewIntersection(null);
-        }
-      } else {
-        setPreviewIntersection(null);
-      }
-    } else {
+    if (!closestStack) {
       setMagneticStackIds([]);
       setPreviewIntersection(null);
+      return;
     }
+
+    setMagneticStackIds([draggedStack.id, closestStack.id]);
+
+    const draggedIds = getCategoryIds(draggedStack);
+    const closestIds = getCategoryIds(closestStack);
+    if (draggedIds.length === 0 || closestIds.length === 0) {
+      setPreviewIntersection(null);
+      return;
+    }
+
+    const unionIds = Array.from(new Set([...draggedIds, ...closestIds]));
+    if (unionIds.length < 2 || unionIds.length > 3) {
+      setPreviewIntersection(null);
+      return;
+    }
+    if (sameCategorySet(unionIds, draggedIds) || sameCategorySet(unionIds, closestIds)) {
+      setPreviewIntersection(null);
+      return;
+    }
+
+    const commonPhotos = getIntersection(draggedStack.photos, closestStack.photos);
+    if (commonPhotos.length === 0) {
+      setPreviewIntersection(null);
+      return;
+    }
+
+    const unionKey = buildCategoryKey(unionIds);
+    const exists = intersectionStacks.some((stack) =>
+      sameCategorySet(getCategoryIds(stack), unionIds) ||
+      stack.categoryKey === unionKey ||
+      stack.id === unionKey
+    );
+    if (exists) {
+      setPreviewIntersection(null);
+      return;
+    }
+
+    const labelMap = new Map();
+    getCategoryIds(draggedStack).forEach((id, idx) => {
+      const label = getCategoryLabels(draggedStack)[idx];
+      labelMap.set(id, label || id);
+    });
+    getCategoryIds(closestStack).forEach((id, idx) => {
+      const label = getCategoryLabels(closestStack)[idx];
+      if (!labelMap.has(id)) labelMap.set(id, label || id);
+    });
+
+    const orderedIds = unionIds.slice().sort();
+    const orderedLabels = orderedIds.map((id) => labelMap.get(id) || id);
+
+    setPreviewIntersection({
+      id: unionKey,
+      categoryKey: unionKey,
+      categoryIds: orderedIds,
+      categoryLabels: orderedLabels,
+      label: orderedLabels.join(" X "),
+      photos: commonPhotos,
+      x: (newX + closestStack.x) / 2,
+      y: Math.min(newY, closestStack.y) - 180,
+      sourceId: draggedStack.id,
+      targetId: closestStack.id,
+    });
   }, [stacks, intersectionStacks]);
+
+  const handlePositionChange = useCallback((stackId, newX, newY, isDragging) => {
+    setStacks(prev => prev.map(s =>
+      s.id === stackId ? { ...s, x: newX, y: newY } : s
+    ));
+
+    if (!isDragging) return;
+
+    const draggedStack = stacks.find(s => s.id === stackId);
+    if (!draggedStack) return;
+
+    updateIntersectionPreview(draggedStack, newX, newY);
+  }, [stacks, updateIntersectionPreview]);
 
   const handleDragEnd = useCallback((stackId, finalX, finalY) => {
     setStacks(prev => prev.map(s =>
@@ -2132,6 +2236,25 @@ export default function App({ onBack }) {
     setIntersectionStacks(prev => prev.map(s =>
       s.id === stackId ? { ...s, x: newX, y: newY } : s
     ));
+    const draggedStack = intersectionStacks.find(s => s.id === stackId);
+    if (draggedStack) {
+      updateIntersectionPreview(draggedStack, newX, newY);
+    }
+  }, [intersectionStacks, updateIntersectionPreview]);
+
+  const handleIntersectionDragEnd = useCallback((stackId, finalX, finalY) => {
+    setIntersectionStacks(prev => prev.map(s =>
+      s.id === stackId ? { ...s, x: finalX, y: finalY } : s
+    ));
+
+    if (previewIntersection && previewIntersection.sourceId === stackId) {
+      setGlowingStackIds([stackId, previewIntersection.targetId]);
+      setTimeout(() => setGlowingStackIds([]), 1200);
+      setIntersectionStacks(prev => [...prev, { ...previewIntersection }]);
+    }
+
+    setMagneticStackIds([]);
+    setPreviewIntersection(null);
   }, []);
 
   useEffect(() => {
@@ -2177,8 +2300,9 @@ export default function App({ onBack }) {
 
   // Arrange stacks to grid (like phone icons)
   const handleArrangeStacks = useCallback(() => {
-    const GRID_START_X = 80;
-    const GRID_START_Y = 80;
+    const origin = getCanvasOrigin();
+    const GRID_START_X = origin.x;
+    const GRID_START_Y = origin.y;
     const GRID_GAP_X = 165;
     const GRID_GAP_Y = 180;
     const COLS = 4;
@@ -2257,7 +2381,7 @@ export default function App({ onBack }) {
                 key={`intersection-${stack.id}`}
                 stack={stack}
                 onPositionChange={handleIntersectionPositionChange}
-                onDragEnd={(id, x, y) => handleIntersectionPositionChange(id, x, y)}
+                onDragEnd={handleIntersectionDragEnd}
                 onDelete={handleDeleteIntersection}
                 onClick={handleStackClick}
                 isIntersection={true}
@@ -2274,48 +2398,49 @@ export default function App({ onBack }) {
           </AnimatePresence>
         )}
 
-        {/* View Mode Toggle + Arrange Button */}
+        {/* View Mode Toggle + Actions */}
         <div className="workspace-toolbar" ref={toolbarRef}>
-          <div className="view-mode-toggle">
-            <button
-              className={`view-mode-btn ${viewMode === 'grid' ? 'view-mode-btn--active' : ''}`}
-              onClick={() => handleViewModeChange('grid')}
-            >
-              <LayoutGrid size={16} />
-              그리드
-            </button>
-            <button
-              className={`view-mode-btn ${viewMode === 'canvas' ? 'view-mode-btn--active' : ''}`}
-              onClick={() => handleViewModeChange('canvas')}
-            >
-              <Layers size={16} />
-              캔버스
-            </button>
-          </div>
-          <div className="item-count-block">
-            <div className="item-count">
-              {filteredPhotos.length}개의 항목
+          <div className="view-mode-row">
+            <div className="view-mode-toggle">
+              <button
+                className={`view-mode-btn ${viewMode === 'grid' ? 'view-mode-btn--active' : ''}`}
+                onClick={() => handleViewModeChange('grid')}
+              >
+                <LayoutGrid size={16} />
+                그리드
+              </button>
+              <button
+                className={`view-mode-btn ${viewMode === 'canvas' ? 'view-mode-btn--active' : ''}`}
+                onClick={() => handleViewModeChange('canvas')}
+              >
+                <Layers size={16} />
+                캔버스
+              </button>
             </div>
-            <button
-              className="item-count-toggle"
-              onClick={() => setShowDetectionBoxes((prev) => !prev)}
-              type="button"
-            >
-              {showDetectionBoxes ? "박스 숨기기" : "박스 보기"}
-            </button>
+            <div className="view-mode-actions">
+              <button
+                className="toolbar-action-btn toolbar-action-btn--ghost"
+                onClick={() => setShowDetectionBoxes((prev) => !prev)}
+                type="button"
+              >
+                {showDetectionBoxes ? "박스 숨기기" : "박스 보기"}
+              </button>
+              {viewMode === 'canvas' && (
+                <motion.button
+                  className="toolbar-action-btn arrange-button"
+                  onClick={handleArrangeStacks}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span className="arrange-icon">⊞</span>
+                  정렬
+                </motion.button>
+              )}
+            </div>
           </div>
-
-          {viewMode === 'canvas' && (
-            <motion.button
-              className="arrange-button"
-              onClick={handleArrangeStacks}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="arrange-icon">⊞</span>
-              정렬
-            </motion.button>
-          )}
+          <div className="item-count">
+            {filteredPhotos.length}개의 항목
+          </div>
         </div>
 
         {/* Grid Mode: Photo Gallery */}

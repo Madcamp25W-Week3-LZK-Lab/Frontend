@@ -622,8 +622,18 @@ body {
   z-index: 20;
 }
 
+/* View Mode Row */
+.view-mode-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  width: min(100%, 720px);
+  column-gap: 16px;
+}
+
 /* View Mode Toggle (Segmented Control) */
 .view-mode-toggle {
+  grid-column: 2;
   display: flex;
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(20px);
@@ -664,32 +674,41 @@ body {
   color: #fff;
 }
 
+.view-mode-actions {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .item-count {
   font-size: 12px;
   color: #111827;
   font-weight: 500;
 }
 
-.item-count-block {
-  display: flex;
-  flex-direction: column;
+.toolbar-action-btn {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.item-count-toggle {
+  padding: 8px 14px;
+  min-height: 32px;
   border: 1px solid rgba(17, 24, 39, 0.12);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   color: #1d1d1f;
   font-size: 12px;
-  padding: 4px 10px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.item-count-toggle:hover {
+.toolbar-action-btn:hover {
   background: #ffffff;
+}
+
+.toolbar-action-btn--ghost {
+  box-shadow: none;
 }
 
 /* ========================================
@@ -761,6 +780,9 @@ body {
   user-select: none;
   padding: 8px;
   /* Space for delete button */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .stack-container {
@@ -963,7 +985,7 @@ body {
 
 /* Glass Label */
 .stack-label {
-  display: block;
+  display: inline-flex;
   margin-top: 8px;
   font-size: 13px;
   font-weight: 600;
@@ -1074,6 +1096,9 @@ body {
 .folder-expanded-label {
   font-weight: 600;
   color: #1d1d1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .folder-expanded-count {
@@ -1081,6 +1106,7 @@ body {
   color: #94a3b8;
   margin-left: auto;
   margin-right: 6px;
+  white-space: nowrap;
 }
 
 .folder-expanded-close {
@@ -1093,6 +1119,9 @@ body {
   color: #fff;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1;
+  flex: 0 0 auto;
+  align-self: center;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1264,20 +1293,14 @@ body {
    Arrange Button
 ======================================== */
 .arrange-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: #007aff;
   border: none;
+  background: #007aff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #fff;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .arrange-button:hover {
