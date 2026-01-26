@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Send, MessageSquare, LayoutGrid, Layers } from "lucide-react";
 import { aiApi, boardApi, driveApi, photosApi, tagsApi } from "../../lib/api";
+import OnboardingOverlay from "../onboarding/OnboardingOverlay.jsx";
 
 const CATEGORY_ICONS = {
   object: Box,
@@ -203,283 +204,6 @@ const NewCategoryModal = ({ isOpen, onClose, onCreate }) => {
   );
 };
 
-// Onboarding Overlay Component
-const OnboardingOverlay = ({
-  onComplete,
-  people = [],
-  interests = [],
-  onRenamePerson,
-  onUpdatePinned,
-  onDriveStart,
-  driveImported,
-  driveImportSummary,
-  drivePreviewPhotos = [],
-}) => {
-  const [step, setStep] = useState(0);
-  const [analysisMessage, setAnalysisMessage] = useState("사진을 분석하는 중...");
-  const [faces, setFaces] = useState(people);
-  const [selectedInterests, setSelectedInterests] = useState([]);
-  const [isExiting, setIsExiting] = useState(false);
-
-  // Step 1: Analysis messages rotation
-  useEffect(() => {
-    if (step !== 1) return;
-
-    const messages = [
-      "사진 12,403장을 분석 중입니다...",
-      "인물을 식별하는 중입니다...",
-      "객체를 분류하는 중입니다...",
-      "카테고리를 정리하는 중입니다..."
-    ];
-
-    let index = 0;
-    const messageInterval = setInterval(() => {
-      index = (index + 1) % messages.length;
-      setAnalysisMessage(messages[index]);
-    }, 800);
-
-    const timer = setTimeout(() => {
-      clearInterval(messageInterval);
-      setStep(2);
-    }, 3000);
-
-    return () => {
-      clearInterval(messageInterval);
-      clearTimeout(timer);
-    };
-  }, [step]);
-
-  useEffect(() => {
-    setFaces(people);
-  }, [people]);
-
-  const handleFaceNameChange = (tagName, nextName) => {
-    setFaces(prev =>
-      prev.map(f => f.tagName === tagName ? { ...f, displayName: nextName } : f)
-    );
-  };
-
-  const handleFaceHide = (tagName) => {
-    setFaces(prev => prev.filter(f => f.tagName !== tagName));
-  };
-
-  const handleInterestToggle = (id) => {
-    setSelectedInterests(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
-  const handleComplete = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      onUpdatePinned?.(selectedInterests);
-      onComplete?.();
-    }, 600);
-  };
-
-  return (
-    <motion.div
-      className={`onboarding-overlay ${isExiting ? 'onboarding-overlay--exiting' : ''}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      {/* Blur Backdrop */}
-      <div className="onboarding-backdrop" />
-
-      {/* Glass Panel */}
-      <motion.div
-        className="onboarding-panel"
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: isExiting ? 1.1 : 1, opacity: isExiting ? 0 : 1 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-      >
-        {/* Step 0: Drive Connect */}
-        {step === 0 && (
-          <div className="onboarding-step onboarding-drive">
-            <h2>Google Drive 연동</h2>
-            <p className="onboarding-subtitle">
-              사진을 불러오기 위해 Google Drive 권한이 필요합니다.
-            </p>
-            {driveImported ? (
-              <p className="onboarding-subtitle">
-                {driveImportSummary || "사진 불러오기가 완료되었습니다."}
-              </p>
-            ) : (
-              <p className="onboarding-subtitle">
-                연동 팝업에서 가져올 폴더를 선택하세요.
-              </p>
-            )}
-            {driveImported && drivePreviewPhotos.length > 0 && (
-              <div className="onboarding-drive-preview">
-                {drivePreviewPhotos.slice(0, 5).map((photo) => (
-                  <div
-                    key={photo.id}
-                    className="onboarding-drive-thumb"
-                    style={{ backgroundImage: `url(${resolvePhotoUrl(photo)})` }}
-                  />
-                ))}
-              </div>
-            )}
-            <button className="onboarding-next" onClick={onDriveStart}>
-              Drive 연동 팝업 열기
-            </button>
-            <button
-              className="onboarding-next"
-              onClick={() => setStep(1)}
-              disabled={!driveImported}
-            >
-              다음
-            </button>
-          </div>
-        )}
-
-        {/* Step 1: AI Analysis */}
-        {step === 1 && (
-          <div className="onboarding-step onboarding-analysis">
-            <motion.div
-              className="breathing-logo"
-              animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-            >
-              Photo-X
-            </motion.div>
-            <p className="analysis-message">{analysisMessage}</p>
-            <div className="analysis-dots">
-              <span /><span /><span />
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: VIP People */}
-        {step === 2 && (
-          <div className="onboarding-step onboarding-people">
-            <h2>이 사람들은 누구인가요?</h2>
-            <p className="onboarding-subtitle">앨범에 자주 등장하는 인물들입니다</p>
-
-            <div className="people-grid">
-              {faces.map(face => (
-                <motion.div
-                  key={face.tagName}
-                  className="face-card"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.08 }}
-                >
-                  <div
-                    className="face-photo"
-                    style={{ backgroundImage: `url(${resolvePhotoUrl(face.photo)})` }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="이름 입력..."
-                    value={face.displayName}
-                    onChange={(e) => handleFaceNameChange(face.tagName, e.target.value)}
-                    onBlur={(e) => {
-                      const nextName = e.target.value.trim();
-                      if (nextName && nextName !== face.tagName) {
-                        onRenamePerson?.(face.tagName, nextName);
-                        setFaces((prev) =>
-                          prev.map((f) =>
-                            f.tagName === face.tagName
-                              ? { ...f, tagName: nextName, displayName: nextName }
-                              : f
-                          )
-                        );
-                      }
-                    }}
-                    className="face-input"
-                  />
-                  <button
-                    className="face-hide"
-                    onClick={() => handleFaceHide(face.tagName)}
-                  >
-                    숨기기
-                  </button>
-                </motion.div>
-              ))}
-            </div>
-
-            <button className="onboarding-next" onClick={() => setStep(3)}>
-              다음
-            </button>
-          </div>
-        )}
-
-        {/* Step 3: Interest Categories */}
-        {step === 3 && (
-          <div className="onboarding-step onboarding-interests">
-            <h2>관심 카테고리를 선택하세요</h2>
-            <p className="onboarding-subtitle">선택한 카테고리가 사이드바에 고정됩니다</p>
-
-            <div className="bubble-cloud">
-              {interests.map(cat => (
-                <motion.button
-                  key={cat.id}
-                  className={`bubble ${selectedInterests.includes(cat.id) ? 'bubble--active' : ''}`}
-                  style={{
-                    fontSize: cat.count > 100 ? '16px' : cat.count > 50 ? '14px' : '13px',
-                    padding: cat.count > 100 ? '12px 20px' : '10px 16px'
-                  }}
-                  onClick={() => handleInterestToggle(cat.id)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <span className="bubble-icon">{cat.icon}</span>
-                  {cat.label}
-                </motion.button>
-              ))}
-            </div>
-
-            <button className="onboarding-next" onClick={() => setStep(4)}>
-              완료
-            </button>
-          </div>
-        )}
-
-        {/* Step 4: Complete */}
-        {step === 4 && (
-          <motion.div
-            className="onboarding-step onboarding-complete"
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-          >
-            <motion.div
-              className="complete-icon"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 20 }}
-            >
-              ✨
-            </motion.div>
-            <h2>설정 완료!</h2>
-            <p>Photo-X가 준비되었습니다</p>
-            <motion.button
-              className="onboarding-start"
-              onClick={handleComplete}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              시작하기
-            </motion.button>
-          </motion.div>
-        )}
-
-        {/* Step Indicator */}
-        {step > 1 && step < 4 && (
-          <div className="onboarding-steps">
-            {[2, 3].map(s => (
-              <div
-                key={s}
-                className={`step-dot ${step >= s ? 'step-dot--active' : ''}`}
-              />
-            ))}
-          </div>
-        )}
-      </motion.div>
-    </motion.div>
-  );
-};
 
 // Get intersection of photo arrays
 const getIntersection = (photos1, photos2) => {
@@ -1413,8 +1137,23 @@ const DriveImportModal = ({
   importPreview = [],
   includeSubfolders,
   onToggleIncludeSubfolders,
+  driveImported,
+  importTotal = 0,
 }) => {
   if (!isOpen) return null;
+  const isComplete = Boolean(driveImported);
+  const handlePrimary = () => {
+    if (isComplete) {
+      onClose?.();
+      return;
+    }
+    if (accessToken) {
+      onImport?.();
+    } else {
+      onRequestToken?.();
+    }
+  };
+  const remainingCount = Math.max(0, (importTotal || 0) - importPreview.length);
 
   return (
     <motion.div
@@ -1430,16 +1169,14 @@ const DriveImportModal = ({
         animate={{ scale: 1, opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3>Google Drive 가져오기</h3>
+        <h3>{isComplete ? "Google Drive 연동 완료" : "Google Drive 연동"}</h3>
         <p className="drive-modal-desc">
-          폴더를 선택하면 하위 폴더까지 모두 검색해서 가져옵니다.
+          {isComplete
+            ? "사진을 성공적으로 불러왔어요."
+            : "사진을 불러오기 위해 Google Drive 접근 권한이 필요합니다."}
         </p>
 
-        {!accessToken ? (
-          <button className="drive-modal-btn" onClick={onRequestToken} disabled={isBusy}>
-            Drive 권한 연결
-          </button>
-        ) : (
+        {!isComplete && accessToken && (
           <>
             <div className="drive-modal-row">
               <label htmlFor="drive-folder">폴더</label>
@@ -1467,30 +1204,48 @@ const DriveImportModal = ({
               />
               하위 폴더 포함
             </label>
-            <button className="drive-modal-btn" onClick={onImport} disabled={isBusy}>
-              가져오기
-            </button>
           </>
         )}
 
-        {importSummary && (
-          <p className="drive-modal-summary">{importSummary}</p>
-        )}
-        {importPreview.length > 0 && (
+        {isComplete && importPreview.length > 0 && (
           <div className="drive-modal-preview">
-            {importPreview.slice(0, 8).map((photo) => (
-              <div
-                key={photo.id}
-                className="drive-modal-thumb"
-                style={{ backgroundImage: `url(${photo.thumbnail_url || photo.original_url})` }}
-              />
-            ))}
+            {importPreview.slice(0, 5).map((photo, index) => {
+              const isLast = index === Math.min(importPreview.length, 5) - 1;
+              return (
+                <div
+                  key={photo.id}
+                  className="drive-modal-thumb"
+                  style={{ backgroundImage: `url(${photo.thumbnail_url || photo.original_url})` }}
+                >
+                  {isLast && remainingCount > 0 && (
+                    <span className="drive-modal-thumb-overlay">+{remainingCount}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
-        {error && <p className="auth-error">{error}</p>}
-        <button className="drive-modal-close" onClick={onClose}>
-          닫기
+
+        {isComplete && importTotal > 0 && (
+          <p className="drive-modal-summary">사진 {importTotal}장 불러옴 · 모두 보기</p>
+        )}
+
+        <button className="drive-modal-btn" onClick={handlePrimary} disabled={isBusy}>
+          {isComplete ? "다음" : "Google Drive 연결하기"}
         </button>
+
+        {isComplete && (
+          <button className="drive-modal-link" onClick={onRequestToken} disabled={isBusy}>
+            다른 계정으로 다시 연결
+          </button>
+        )}
+
+        {error && <p className="auth-error">{error}</p>}
+        {!isComplete && (
+          <button className="drive-modal-close" onClick={onClose}>
+            닫기
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -2287,6 +2042,7 @@ export default function App({ onBack }) {
             driveImported={driveImported}
             driveImportSummary={driveImportSummary}
             drivePreviewPhotos={allPhotos}
+            resolvePhotoUrl={resolvePhotoUrl}
           />
         )}
       </AnimatePresence>
@@ -2310,6 +2066,8 @@ export default function App({ onBack }) {
             importPreview={driveImportPreview}
             includeSubfolders={includeSubfolders}
             onToggleIncludeSubfolders={setIncludeSubfolders}
+            driveImported={driveImported}
+            importTotal={driveImportTotal}
           />
         )}
       </AnimatePresence>
