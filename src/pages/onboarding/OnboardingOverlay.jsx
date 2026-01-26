@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import "../../styles/onboarding/OnboardingOverlay.css";
 
@@ -16,12 +16,14 @@ export default function OnboardingOverlay({
   resolvePhotoUrl,
   aiStatus,
   aiError,
+  skipDriveStep = false,
 }) {
   const [step, setStep] = useState(0);
   const [analysisMessage, setAnalysisMessage] = useState("사진을 분석하는 중...");
   const [faces, setFaces] = useState(people);
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [isExiting, setIsExiting] = useState(false);
+  const autoAdvanceRef = useRef(false);
 
   // Step 1: Analysis messages rotation (until AI finishes)
   useEffect(() => {
@@ -58,6 +60,14 @@ export default function OnboardingOverlay({
   useEffect(() => {
     setFaces(people);
   }, [people]);
+
+  useEffect(() => {
+    if (!skipDriveStep) return;
+    if (step !== 0) return;
+    if (autoAdvanceRef.current) return;
+    autoAdvanceRef.current = true;
+    setStep(1);
+  }, [skipDriveStep, step]);
 
   const handleFaceNameChange = (tagName, nextName) => {
     setFaces((prev) =>

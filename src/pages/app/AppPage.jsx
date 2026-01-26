@@ -348,6 +348,9 @@ const PhotoViewer = ({
     if (!det?.bbox) return null;
     const normalized = det.normalized === true;
     const format = det.bbox_format || (det.bbox?.x1 !== undefined ? "xyxy" : "xywh");
+    if (typeof det.confidence === "number" && det.confidence < 0.5) {
+      return null;
+    }
     let x1;
     let y1;
     let x2;
@@ -1221,6 +1224,7 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
 const DriveImportModal = ({
   isOpen,
   onClose,
+  onProceed,
   accessToken,
   folders,
   selectedFolderId,
@@ -1241,7 +1245,7 @@ const DriveImportModal = ({
   const isComplete = Boolean(driveImported && importTotal > 0);
   const handlePrimary = () => {
     if (isComplete) {
-      onClose?.();
+      onProceed?.();
       return;
     }
     if (accessToken) {
@@ -1382,7 +1386,9 @@ export default function App({ onBack }) {
   const [aiStatus, setAiStatus] = useState({ status: "idle" });
   const [aiError, setAiError] = useState("");
   const [showDetectionBoxes, setShowDetectionBoxes] = useState(false);
+  const [analysisStarted, setAnalysisStarted] = useState(false);
   const authToken = localStorage.getItem("auth_token") || "";
+  const onboardingDriveStartedRef = useRef(false);
   const stackIdRef = useRef(0);
   const workspaceRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -1503,6 +1509,20 @@ export default function App({ onBack }) {
     script.dataset.googleIdentity = "true";
     document.head.appendChild(script);
   }, []);
+
+  useEffect(() => {
+    if (!showOnboarding) return;
+    if (driveImported) return;
+    if (showDriveModal) return;
+    if (onboardingDriveStartedRef.current) return;
+    onboardingDriveStartedRef.current = true;
+    setShowDriveModal(true);
+  }, [showOnboarding, driveImported, showDriveModal]);
+
+  useEffect(() => {
+    if (!showDriveModal) return;
+    setAnalysisStarted(false);
+  }, [showDriveModal]);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -1875,16 +1895,18 @@ export default function App({ onBack }) {
           setLoadError("선택한 폴더에서 이미지를 찾지 못했습니다.");
         }
       }
-      if (hasPhotos) {
-        await startAiCategorize();
-      }
-      setShowDriveModal(false);
     } catch (error) {
       setLoadError(error?.message || "드라이브 가져오기에 실패했습니다.");
     } finally {
       setIsLoading(false);
     }
-  }, [driveAccessToken, selectedFolderId, includeSubfolders, startAiCategorize]);
+  }, [driveAccessToken, selectedFolderId, includeSubfolders]);
+
+  const handleDriveProceed = useCallback(async () => {
+    setShowDriveModal(false);
+    setAnalysisStarted(true);
+    await startAiCategorize();
+  }, [startAiCategorize]);
 
   const handleRequestDriveToken = useCallback(async () => {
     setIsLoading(true);
@@ -2093,19 +2115,21 @@ export default function App({ onBack }) {
   }, [showDriveModal, driveAccessToken, handleLoadDriveFolders]);
 
   useEffect(() => {
-    if (!driveImported) return;
+    if (!analysisStarted) return;
     fetchAiStatus();
-  }, [driveImported, fetchAiStatus]);
+  }, [analysisStarted, fetchAiStatus]);
 
   useEffect(() => {
+    if (!analysisStarted) return;
     if (!["queued", "running"].includes(aiStatus?.status)) return;
     const interval = setInterval(() => {
       fetchAiStatus();
     }, 3000);
     return () => clearInterval(interval);
-  }, [aiStatus?.status, fetchAiStatus]);
+  }, [analysisStarted, aiStatus?.status, fetchAiStatus]);
 
   useEffect(() => {
+    if (!analysisStarted) return;
     if (aiStatus?.status !== "done") return;
     refreshTags();
     boardApi.get().then((board) => {
@@ -2114,7 +2138,7 @@ export default function App({ onBack }) {
         pinned_tags: board?.pinned_tags || [],
       });
     });
-  }, [aiStatus?.status, refreshTags]);
+  }, [analysisStarted, aiStatus?.status, refreshTags]);
 
   // Arrange stacks to grid (like phone icons)
   const handleArrangeStacks = useCallback(() => {
@@ -2314,7 +2338,7 @@ export default function App({ onBack }) {
 
       {/* Onboarding Overlay */}
       <AnimatePresence>
-        {showOnboarding && (
+        {showOnboarding && analysisStarted && driveImported && !showDriveModal && (
           <OnboardingOverlay
             onComplete={() => setShowOnboarding(false)}
             people={peopleTags.map((person) => ({
@@ -2338,6 +2362,7 @@ export default function App({ onBack }) {
             resolvePhotoUrl={resolvePhotoUrl}
             aiStatus={aiStatus}
             aiError={aiError}
+            skipDriveStep={true}
           />
         )}
       </AnimatePresence>
@@ -2348,6 +2373,7 @@ export default function App({ onBack }) {
           <DriveImportModal
             isOpen={showDriveModal}
             onClose={() => setShowDriveModal(false)}
+            onProceed={handleDriveProceed}
             accessToken={driveAccessToken}
             folders={driveFolders}
             selectedFolderId={selectedFolderId}

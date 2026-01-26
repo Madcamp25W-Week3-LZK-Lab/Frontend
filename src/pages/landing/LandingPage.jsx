@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { authApi } from "../../lib/api";
 import AuthModal from "../auth/AuthModal.jsx";
@@ -13,24 +13,42 @@ export default function LandingPage({ onLogin, initialAuthOpen = false }) {
     const [passwordConfirm, setPasswordConfirm] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const googleScriptRef = useRef(null);
+
+    const ensureGoogleScript = useCallback(() => {
+        if (window.google?.accounts?.id) {
+            return Promise.resolve(true);
+        }
+        if (googleScriptRef.current) {
+            return googleScriptRef.current;
+        }
+        googleScriptRef.current = new Promise((resolve, reject) => {
+            const existing = document.querySelector('script[data-google-identity="true"]');
+            if (existing) {
+                existing.addEventListener("load", () => resolve(true), { once: true });
+                existing.addEventListener("error", () => reject(new Error("Google 스크립트를 불러오지 못했습니다.")), { once: true });
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = "https://accounts.google.com/gsi/client";
+            script.async = true;
+            script.defer = true;
+            script.dataset.googleIdentity = "true";
+            script.onload = () => resolve(true);
+            script.onerror = () => reject(new Error("Google 스크립트를 불러오지 못했습니다."));
+            document.head.appendChild(script);
+        });
+        return googleScriptRef.current;
+    }, []);
+
     useEffect(() => {
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
         if (!clientId) {
             return;
         }
-
-        const existing = document.querySelector('script[data-google-identity="true"]');
-        if (existing) {
-            return;
-        }
-
-        const script = document.createElement("script");
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.dataset.googleIdentity = "true";
-        document.head.appendChild(script);
-    }, []);
+        ensureGoogleScript().catch(() => {});
+    }, [ensureGoogleScript]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -66,11 +84,18 @@ export default function LandingPage({ onLogin, initialAuthOpen = false }) {
         }
     };
 
-    const handleGoogleLogin = () => {
+    const handleGoogleLogin = async () => {
         setAuthError("");
         const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
         if (!clientId) {
             setAuthError("Google Client ID가 설정되어 있지 않습니다.");
+            return;
+        }
+
+        try {
+            await ensureGoogleScript();
+        } catch (error) {
+            setAuthError(error?.message || "Google 로그인 스크립트 로드 중입니다. 잠시 후 다시 시도해주세요.");
             return;
         }
 
@@ -82,6 +107,7 @@ export default function LandingPage({ onLogin, initialAuthOpen = false }) {
         window.google.accounts.id.initialize({
             client_id: clientId,
             ux_mode: "popup",
+            use_fedcm_for_prompt: false,
             callback: async (response) => {
                 try {
                     const idToken = response.credential;
