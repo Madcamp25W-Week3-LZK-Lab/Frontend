@@ -1888,6 +1888,8 @@ body {
   font-size: 12px;
   color: #6b7280;
   cursor: pointer;
+  width: 100%;
+  text-align: center;
 }
 
 .drive-modal-link {

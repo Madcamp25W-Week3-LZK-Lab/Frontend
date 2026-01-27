@@ -1515,7 +1515,14 @@ export default function App({ onBack }) {
         ]);
         setTagsSummary(tags || []);
         setPeopleTags(people || []);
-        if ((people || []).length > 0 || (tags || []).length > 0) {
+        const counts = new Map();
+        (tags || []).forEach((tag) => {
+          if (tag?.name) counts.set(tag.name, tag.count || 0);
+        });
+        const peopleWithMinCount = (people || []).filter(
+          (person) => (counts.get(person?.name) || 0) >= 3
+        );
+        if (peopleWithMinCount.length > 0 || (tags || []).length > 0) {
           break;
         }
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -1685,7 +1692,7 @@ export default function App({ onBack }) {
       .filter((tag) => {
         const count = tag.count || 0;
         if (count <= 0) return false;
-        if (tag.type === "person" && count <= 3) return false;
+        if (tag.type === "person" && count < 3) return false;
         return true;
       })
       .map((tag) => ({
@@ -1698,6 +1705,20 @@ export default function App({ onBack }) {
       }))
       .sort((a, b) => a.label.localeCompare(b.label, "en", { numeric: true, sensitivity: "base" }));
   }, [tagsSummary]);
+
+  const personCountMap = useMemo(() => {
+    const map = new Map();
+    tagsSummary.forEach((tag) => {
+      if (tag?.name) {
+        map.set(tag.name, tag.count || 0);
+      }
+    });
+    return map;
+  }, [tagsSummary]);
+
+  const onboardingPeople = useMemo(() => {
+    return peopleTags.filter((person) => (personCountMap.get(person.name) || 0) >= 3);
+  }, [peopleTags, personCountMap]);
 
   const customCategoryItems = useMemo(() => {
     return customAlbums
@@ -2555,7 +2576,7 @@ export default function App({ onBack }) {
         {showOnboarding && analysisStarted && driveImported && !showDriveModal && (
           <OnboardingOverlay
             onComplete={() => setShowOnboarding(false)}
-            people={peopleTags.map((person) => ({
+            people={onboardingPeople.map((person) => ({
               tagName: person.name,
               displayName: person.name,
               photo: person.photo,
