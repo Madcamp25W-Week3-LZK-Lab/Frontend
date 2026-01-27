@@ -1390,7 +1390,7 @@ const DriveImportModal = ({
         )}
 
         <button className="drive-modal-btn" onClick={handlePrimary} disabled={isBusy}>
-          {isComplete ? "다음" : "Google Drive 연결하기"}
+          {isBusy ? "Google Drive를 불러오는 중..." : isComplete ? "다음" : "Google Drive 연결하기"}
         </button>
 
         {isComplete && (
@@ -1490,6 +1490,15 @@ export default function App({ onBack }) {
     checkedItemsRef.current = checkedItems;
   }, [checkedItems]);
 
+  const refreshTags = useCallback(async () => {
+    const [tags, people] = await Promise.all([
+      tagsApi.listSummary(),
+      tagsApi.listPeople(),
+    ]);
+    setTagsSummary(tags || []);
+    setPeopleTags(people || []);
+  }, []);
+
   const buildWsUrl = useCallback(() => {
     const token = localStorage.getItem("auth_token");
     if (!token) return null;
@@ -1531,6 +1540,18 @@ export default function App({ onBack }) {
           return;
         }
 
+        if (payload?.type === "categorize_done") {
+          setAiStatus((prev) => ({ ...(prev || {}), status: "done" }));
+          refreshTags();
+          boardApi.get().then((board) => {
+            setBoardState({
+              albums: board?.albums || [],
+              pinned_tags: board?.pinned_tags || [],
+            });
+          });
+          return;
+        }
+
         if (!payload?.prompt_id) return;
         const entry = pendingPromptRef.current.get(payload.prompt_id);
         if (!entry) return;
@@ -1568,7 +1589,7 @@ export default function App({ onBack }) {
         wsRef.current = null;
       }
     };
-  }, [buildWsUrl]);
+  }, [buildWsUrl, refreshTags]);
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -1634,14 +1655,22 @@ export default function App({ onBack }) {
   const customAlbums = useMemo(() => boardState.albums || [], [boardState.albums]);
 
   const tagItems = useMemo(() => {
-    return tagsSummary.map((tag) => ({
-      id: `tag:${tag.name}`,
-      name: tag.name,
-      label: tag.name,
-      count: tag.count || 0,
-      type: tag.type || "other",
-      kind: "tag",
-    }));
+    return tagsSummary
+      .filter((tag) => {
+        const count = tag.count || 0;
+        if (count <= 0) return false;
+        if (tag.type === "person" && count <= 3) return false;
+        return true;
+      })
+      .map((tag) => ({
+        id: `tag:${tag.name}`,
+        name: tag.name,
+        label: tag.name,
+        count: tag.count || 0,
+        type: tag.type || "other",
+        kind: "tag",
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, "en", { numeric: true, sensitivity: "base" }));
   }, [tagsSummary]);
 
   const customCategoryItems = useMemo(() => {
@@ -1703,15 +1732,6 @@ export default function App({ onBack }) {
     });
     return Array.from(seen.values());
   }, [checkedItems, categoryPhotosMap, allPhotos]);
-
-  const refreshTags = useCallback(async () => {
-    const [tags, people] = await Promise.all([
-      tagsApi.listSummary(),
-      tagsApi.listPeople(),
-    ]);
-    setTagsSummary(tags || []);
-    setPeopleTags(people || []);
-  }, []);
 
   const fetchAiStatus = useCallback(async () => {
     try {
