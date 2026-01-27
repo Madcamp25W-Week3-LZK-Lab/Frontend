@@ -1607,6 +1607,12 @@ function populatePanel(panel, cityData) {
                 img.onerror = () => {
                     thumb.innerHTML = '<div class="hover-thumb-placeholder">📷</div>';
                 };
+                if (photo.id) {
+                    thumb.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent('photo:view', { detail: { id: photo.id } }));
+                    });
+                }
                 thumb.appendChild(img);
                 thumbsEl.appendChild(thumb);
             }
@@ -1628,6 +1634,12 @@ function populatePanel(panel, cityData) {
                 img.onerror = () => {
                     thumb.innerHTML = '<div class="hover-thumb-placeholder">📷</div>';
                 };
+                if (photo.id) {
+                    thumb.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent('photo:view', { detail: { id: photo.id } }));
+                    });
+                }
                 thumb.appendChild(img);
                 thumbsEl.appendChild(thumb);
             }

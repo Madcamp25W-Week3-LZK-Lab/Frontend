@@ -1781,6 +1781,18 @@ export default function App({ onBack }) {
     return Array.from(seen.values());
   }, [checkedItems, categoryPhotosMap, allPhotos]);
 
+  useEffect(() => {
+    const handleExternalView = (event) => {
+      const photoId = event?.detail?.id;
+      if (!photoId) return;
+      const fromAll = allPhotos.find((photo) => photo.id === photoId);
+      const fromFiltered = filteredPhotos.find((photo) => photo.id === photoId);
+      setViewerPhoto(fromAll || fromFiltered || null);
+    };
+    window.addEventListener("photo:view", handleExternalView);
+    return () => window.removeEventListener("photo:view", handleExternalView);
+  }, [allPhotos, filteredPhotos]);
+
   const fetchAiStatus = useCallback(async () => {
     try {
       const status = await aiApi.status();
