@@ -393,8 +393,12 @@ const PhotoViewer = ({
     if (!det?.bbox) return null;
     const normalized = det.normalized === true;
     const format = det.bbox_format || (det.bbox?.x1 !== undefined ? "xyxy" : "xywh");
-    if (typeof det.confidence === "number" && det.confidence < 0.4) {
-      return null;
+    const labelText = det.person_tag || det.label || det.type || "";
+    if (typeof det.confidence === "number") {
+      const threshold = labelText === "barcode" ? 0.8 : 0.4;
+      if (det.confidence < threshold) {
+        return null;
+      }
     }
     let x1;
     let y1;
@@ -446,7 +450,7 @@ const PhotoViewer = ({
       y: y1 * scale + offsetY,
       w: (x2 - x1) * scale,
       h: (y2 - y1) * scale,
-      label: det.person_tag || det.label || det.type || "",
+      label: labelText,
       type: det.type || "object",
       confidence: det.confidence,
     };
@@ -1455,6 +1459,7 @@ export default function App({ onBack }) {
   const wsRef = useRef(null);
   const wsConnectedRef = useRef(false);
   const pendingPromptRef = useRef(new Map());
+  const refreshTagsLoopRef = useRef(false);
 
   const getCanvasOrigin = useCallback(() => {
     const defaultOrigin = { x: 80, y: 80 };
@@ -1497,6 +1502,27 @@ export default function App({ onBack }) {
     ]);
     setTagsSummary(tags || []);
     setPeopleTags(people || []);
+  }, []);
+
+  const refreshTagsUntilReady = useCallback(async () => {
+    if (refreshTagsLoopRef.current) return;
+    refreshTagsLoopRef.current = true;
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const [tags, people] = await Promise.all([
+          tagsApi.listSummary(),
+          tagsApi.listPeople(),
+        ]);
+        setTagsSummary(tags || []);
+        setPeopleTags(people || []);
+        if ((people || []).length > 0 || (tags || []).length > 0) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    } finally {
+      refreshTagsLoopRef.current = false;
+    }
   }, []);
 
   const buildWsUrl = useCallback(() => {
@@ -1542,7 +1568,7 @@ export default function App({ onBack }) {
 
         if (payload?.type === "categorize_done") {
           setAiStatus((prev) => ({ ...(prev || {}), status: "done" }));
-          refreshTags();
+          refreshTagsUntilReady();
           boardApi.get().then((board) => {
             setBoardState({
               albums: board?.albums || [],
@@ -1589,7 +1615,7 @@ export default function App({ onBack }) {
         wsRef.current = null;
       }
     };
-  }, [buildWsUrl, refreshTags]);
+  }, [buildWsUrl, refreshTagsUntilReady]);
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -2309,14 +2335,22 @@ export default function App({ onBack }) {
   useEffect(() => {
     if (!analysisStarted) return;
     if (aiStatus?.status !== "done") return;
-    refreshTags();
+    refreshTagsUntilReady();
     boardApi.get().then((board) => {
       setBoardState({
         albums: board?.albums || [],
         pinned_tags: board?.pinned_tags || [],
       });
     });
-  }, [analysisStarted, aiStatus?.status, refreshTags]);
+  }, [analysisStarted, aiStatus?.status, refreshTagsUntilReady]);
+
+  useEffect(() => {
+    if (!showOnboarding) return;
+    if (!analysisStarted) return;
+    if (aiStatus?.status !== "done") return;
+    if (peopleTags.length > 0 || tagItems.length > 0) return;
+    refreshTagsUntilReady();
+  }, [showOnboarding, analysisStarted, aiStatus?.status, peopleTags.length, tagItems.length, refreshTagsUntilReady]);
 
   // Arrange stacks to grid (like phone icons)
   const handleArrangeStacks = useCallback(() => {

@@ -50,12 +50,16 @@ export default function OnboardingOverlay({
   useEffect(() => {
     if (step !== 1) return;
     if (aiStatus?.status === "done") {
-      setStep(2);
+      if (people.length > 0 || interests.length > 0) {
+        setStep(2);
+      } else {
+        setAnalysisMessage("분석 결과를 반영하는 중...");
+      }
     }
     if (aiStatus?.status === "error" && aiError) {
       setAnalysisMessage(`분석에 실패했습니다: ${aiError}`);
     }
-  }, [step, aiStatus, aiError]);
+  }, [step, aiStatus, aiError, people.length, interests.length]);
 
   useEffect(() => {
     setFaces(people);
