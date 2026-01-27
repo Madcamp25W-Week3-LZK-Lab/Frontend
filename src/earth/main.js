@@ -834,14 +834,15 @@ async function loadPhotoAlbumsFromApi() {
         if (lat == null || lon == null) return;
         const city = photo.city || photo.file_name || 'Unknown';
         const country = photo.country || '';
-        const key = `${city}|${country}|${lat}|${lon}`;
+        const key = `${city}|${country}`;
         if (!groups.has(key)) {
             groups.set(key, {
                 id: key,
                 city,
                 country,
-                lat,
-                lon,
+                latSum: 0,
+                lonSum: 0,
+                count: 0,
                 photos: [],
             });
         }
@@ -853,8 +854,18 @@ async function loadPhotoAlbumsFromApi() {
             url,
             title: photo.file_name || photo.id,
         });
+        entry.latSum += lat;
+        entry.lonSum += lon;
+        entry.count += 1;
     });
-    return Array.from(groups.values());
+    return Array.from(groups.values()).map((entry) => ({
+        id: entry.id,
+        city: entry.city,
+        country: entry.country,
+        lat: entry.count ? entry.latSum / entry.count : 0,
+        lon: entry.count ? entry.lonSum / entry.count : 0,
+        photos: entry.photos,
+    }));
 }
 
 async function initializePhotoData() {
