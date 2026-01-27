@@ -393,7 +393,7 @@ const PhotoViewer = ({
     if (!det?.bbox) return null;
     const normalized = det.normalized === true;
     const format = det.bbox_format || (det.bbox?.x1 !== undefined ? "xyxy" : "xywh");
-    if (typeof det.confidence === "number" && det.confidence < 0.5) {
+    if (typeof det.confidence === "number" && det.confidence < 0.4) {
       return null;
     }
     let x1;
