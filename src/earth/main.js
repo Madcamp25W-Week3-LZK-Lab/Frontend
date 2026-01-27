@@ -2005,8 +2005,7 @@ function animate() {
         const cameraFromOrigin = camera.position.clone().normalize();
         const markerFromOrigin = worldPos.clone().normalize();
         const facingDot = cameraFromOrigin.dot(markerFromOrigin);
-        const anchorPos = facingDot < 0 ? worldPos.clone().multiplyScalar(-1) : worldPos;
-        const screenPos = anchorPos.project(camera);
+        const screenPos = worldPos.project(camera);
         const screenX = (screenPos.x + 1) / 2 * window.innerWidth;
         const screenY = -(screenPos.y - 1) / 2 * window.innerHeight;
         positionPanel(panel, screenX, screenY);
