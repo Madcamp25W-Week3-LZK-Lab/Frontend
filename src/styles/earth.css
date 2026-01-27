@@ -79,8 +79,8 @@
     background: rgba(0, 0, 0, 0.92);
     border: 1px solid rgba(0, 255, 154, 0.25);
     border-radius: 4px;
-    min-width: 280px;
-    max-width: 320px;
+    min-width: 200px;
+    max-width: 220px;
     opacity: 0;
     transform: translateY(10px);
     transition: opacity 0.25s ease, transform 0.25s ease;
@@ -95,10 +95,36 @@
     pointer-events: auto;
 }
 
+.hover-panel-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 255, 154, 0.35);
+    background: rgba(0, 0, 0, 0.55);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.hover-panel-close:hover {
+    background: rgba(0, 0, 0, 0.75);
+    border-color: rgba(0, 255, 154, 0.6);
+    transform: scale(1.05);
+}
+
 /* Main photo preview (top section) */
 .hover-photo-preview {
     width: 100%;
-    height: 140px;
+    height: 100px;
     background: linear-gradient(135deg, rgba(0, 30, 20, 1), rgba(0, 10, 15, 1));
     position: relative;
     overflow: hidden;
@@ -117,7 +143,7 @@
 
 /* Content section */
 .hover-content {
-    padding: 14px 16px;
+    padding: 10px 12px;
 }
 
 .hover-header {
@@ -165,14 +191,14 @@
 
 /* Thumbnail grid */
 .hover-thumbnails {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 6px;
-    flex-wrap: wrap;
 }
 
 .hover-thumb {
-    width: 48px;
-    height: 48px;
+    width: 100%;
+    height: 34px;
     background: rgba(0, 255, 154, 0.08);
     border: 1px solid rgba(0, 255, 154, 0.2);
     border-radius: 3px;
@@ -182,6 +208,16 @@
     opacity: 0;
     transform: scale(0.9);
     animation: thumbFadeIn 0.2s ease forwards;
+}
+
+.hover-thumb--more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(0, 255, 154, 0.25);
 }
 
 .hover-thumb:hover {

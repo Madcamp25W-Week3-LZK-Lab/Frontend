@@ -25,6 +25,7 @@ export default function PlaceView({ active }) {
       <div className="instruction">Drag to explore</div>
 
       <div id="hover-panel" className="hover-panel">
+        <button className="hover-panel-close" type="button" aria-label="닫기">✕</button>
         <div className="hover-photo-preview">
           <img id="hover-main-photo" className="hover-main-photo" src="" alt="" />
         </div>

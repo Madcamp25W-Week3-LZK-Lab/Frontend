@@ -1581,28 +1581,52 @@ function populatePanel(panel, cityData) {
 
     if (thumbsEl) {
         thumbsEl.innerHTML = '';
-        const maxThumbs = Math.min(5, photoCount);
-        for (let i = 0; i < maxThumbs; i++) {
-            const photo = cityData.photos[i];
-            const photoUrl = photo.url || photo;
-            const thumb = document.createElement('div');
-            thumb.className = 'hover-thumb';
-            thumb.style.animationDelay = `${i * 0.05}s`;
-            const img = document.createElement('img');
-            img.src = photoUrl;
-            img.alt = photo.title || `Photo ${i + 1}`;
-            img.onerror = () => {
-                thumb.innerHTML = '<div class="hover-thumb-placeholder">📷</div>';
-            };
-            thumb.appendChild(img);
-            thumbsEl.appendChild(thumb);
+        const maxThumbs = 4;
+        if (photoCount > maxThumbs) {
+            const visible = maxThumbs - 1;
+            for (let i = 0; i < visible; i++) {
+                const photo = cityData.photos[i];
+                const photoUrl = photo.url || photo;
+                const thumb = document.createElement('div');
+                thumb.className = 'hover-thumb';
+                thumb.style.animationDelay = `${i * 0.05}s`;
+                const img = document.createElement('img');
+                img.src = photoUrl;
+                img.alt = photo.title || `Photo ${i + 1}`;
+                img.onerror = () => {
+                    thumb.innerHTML = '<div class="hover-thumb-placeholder">📷</div>';
+                };
+                thumb.appendChild(img);
+                thumbsEl.appendChild(thumb);
+            }
+            const remaining = photoCount - visible;
+            const more = document.createElement('div');
+            more.className = 'hover-thumb hover-thumb--more';
+            more.textContent = `+${remaining}`;
+            thumbsEl.appendChild(more);
+        } else {
+            for (let i = 0; i < photoCount; i++) {
+                const photo = cityData.photos[i];
+                const photoUrl = photo.url || photo;
+                const thumb = document.createElement('div');
+                thumb.className = 'hover-thumb';
+                thumb.style.animationDelay = `${i * 0.05}s`;
+                const img = document.createElement('img');
+                img.src = photoUrl;
+                img.alt = photo.title || `Photo ${i + 1}`;
+                img.onerror = () => {
+                    thumb.innerHTML = '<div class="hover-thumb-placeholder">📷</div>';
+                };
+                thumb.appendChild(img);
+                thumbsEl.appendChild(thumb);
+            }
         }
     }
 }
 
 function positionPanel(panel, screenX, screenY) {
-    const panelWidth = 300;
-    const panelHeight = 280;
+    const panelWidth = 220;
+    const panelHeight = 220;
     let posX = screenX + 25;
     let posY = screenY - panelHeight / 2;
 
@@ -1793,6 +1817,14 @@ function onMarkerClick(event) {
                     positionPanel(panel, event.clientX, event.clientY);
                     const container = document.querySelector('.earth-view') || document.body;
                     container.appendChild(panel);
+                    const closeBtn = panel.querySelector('.hover-panel-close');
+                    if (closeBtn) {
+                        closeBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            panel.remove();
+                            pinnedPanels.delete(key);
+                        });
+                    }
                     pinnedPanels.set(key, { panel, group: parentGroup, cityData });
                 }
             } else {
