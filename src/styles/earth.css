@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap');
+
+/**
+ * ================================================
+ * EARTH 2050 - MUSEUM STYLE
+ * Ultra minimal, matches 2050.earth
+ * ================================================
+ */
+
+.earth-view * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.earth-view {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #000000;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.earth-view #canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* Title - very subtle */
+.title-overlay {
+    position: absolute;
+    top: 32px;
+    left: 32px;
+    z-index: 10;
+    opacity: 0;
+    animation: fadeIn 2s ease 3s forwards;
+}
+
+.title-overlay h1 {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.3);
+    text-transform: uppercase;
+}
+
+.title-overlay .subtitle {
+    display: none;
+    /* Hidden for cleaner look */
+}
+
+/* Instruction - barely visible */
+.instruction {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.15);
+    opacity: 0;
+    animation: fadeIn 1s ease 4s forwards;
+}
+
+/* ================================================
+   HOVER PANEL - Earth 2050 Style with Photo Preview
+   ================================================ */
+.hover-panel {
+    position: absolute;
+    z-index: 100;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.92);
+    border: 1px solid rgba(0, 255, 154, 0.25);
+    border-radius: 4px;
+    min-width: 280px;
+    max-width: 320px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.hover-panel.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Main photo preview (top section) */
+.hover-photo-preview {
+    width: 100%;
+    height: 140px;
+    background: linear-gradient(135deg, rgba(0, 30, 20, 1), rgba(0, 10, 15, 1));
+    position: relative;
+    overflow: hidden;
+}
+
+.hover-main-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+}
+
+.hover-main-photo.loaded {
+    display: block;
+}
+
+/* Content section */
+.hover-content {
+    padding: 14px 16px;
+}
+
+.hover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+
+.hover-city {
+    font-size: 18px;
+    font-weight: 500;
+    color: #ffffff;
+    line-height: 1.2;
+}
+
+.hover-flag {
+    width: 24px;
+    height: 18px;
+    border-radius: 2px;
+    object-fit: cover;
+    display: none;
+}
+
+.hover-flag.loaded {
+    display: block;
+}
+
+.hover-country {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+}
+
+.hover-photo-count {
+    font-size: 11px;
+    color: #00ff9a;
+    margin-bottom: 10px;
+    font-weight: 400;
+}
+
+/* Thumbnail grid */
+.hover-thumbnails {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.hover-thumb {
+    width: 48px;
+    height: 48px;
+    background: rgba(0, 255, 154, 0.08);
+    border: 1px solid rgba(0, 255, 154, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+    opacity: 0;
+    transform: scale(0.9);
+    animation: thumbFadeIn 0.2s ease forwards;
+}
+
+.hover-thumb:hover {
+    border-color: #00ff9a;
+    transform: scale(1.05);
+}
+
+.hover-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hover-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: rgba(0, 255, 154, 0.4);
+}
+
+@keyframes thumbFadeIn {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Hide old tooltip and gallery */
+.marker-tooltip,
+.gallery-panel {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

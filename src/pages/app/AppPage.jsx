@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Send, MessageSquare, LayoutGrid, Layers } from "lucide-react";
 import { aiApi, boardApi, driveApi, photosApi, promptsApi, tagsApi } from "../../lib/api";
 import OnboardingOverlay from "../onboarding/OnboardingOverlay.jsx";
+import PlaceView from "./PlaceView.jsx";
 
 const CATEGORY_ICONS = {
   object: Box,
@@ -1425,7 +1426,7 @@ export default function App({ onBack }) {
   const [magneticStackIds, setMagneticStackIds] = useState([]);
   const [glowingStackIds, setGlowingStackIds] = useState([]);
   const [expandedStacks, setExpandedStacks] = useState([]);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'canvas'
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'canvas' | 'place'
   const [showOnboarding, setShowOnboarding] = useState(true); // Show onboarding for new users
   const [viewerPhoto, setViewerPhoto] = useState(null); // Photo lightbox
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
@@ -2476,22 +2477,29 @@ export default function App({ onBack }) {
         {/* View Mode Toggle + Actions */}
         <div className="workspace-toolbar" ref={toolbarRef}>
           <div className="view-mode-row">
-            <div className="view-mode-toggle">
-              <button
-                className={`view-mode-btn ${viewMode === 'grid' ? 'view-mode-btn--active' : ''}`}
-                onClick={() => handleViewModeChange('grid')}
-              >
-                <LayoutGrid size={16} />
-                그리드
-              </button>
-              <button
-                className={`view-mode-btn ${viewMode === 'canvas' ? 'view-mode-btn--active' : ''}`}
-                onClick={() => handleViewModeChange('canvas')}
-              >
-                <Layers size={16} />
-                캔버스
-              </button>
-            </div>
+          <div className="view-mode-toggle">
+            <button
+              className={`view-mode-btn ${viewMode === 'grid' ? 'view-mode-btn--active' : ''}`}
+              onClick={() => handleViewModeChange('grid')}
+            >
+              <LayoutGrid size={16} />
+              그리드
+            </button>
+            <button
+              className={`view-mode-btn ${viewMode === 'canvas' ? 'view-mode-btn--active' : ''}`}
+              onClick={() => handleViewModeChange('canvas')}
+            >
+              <Layers size={16} />
+              캔버스
+            </button>
+            <button
+              className={`view-mode-btn ${viewMode === 'place' ? 'view-mode-btn--active' : ''}`}
+              onClick={() => handleViewModeChange('place')}
+            >
+              <MapPin size={16} />
+              플레이스
+            </button>
+          </div>
             <div className="view-mode-actions">
               <button
                 className="toolbar-action-btn toolbar-action-btn--ghost"
@@ -2522,6 +2530,9 @@ export default function App({ onBack }) {
         {viewMode === 'grid' && (
           <PhotoGrid photos={filteredPhotos} onPhotoClick={setViewerPhoto} />
         )}
+
+        {/* Place Mode: Earth View */}
+        <PlaceView active={viewMode === 'place'} />
 
         {/* Canvas Mode: Empty State */}
         {viewMode === 'canvas' && isEmpty && (
