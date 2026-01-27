@@ -57,6 +57,10 @@ const CONFIG = {
     starShellRadius: 60,
 };
 
+// Disable album previews/open stacks (removes scattered photo UI)
+const ENABLE_ALBUMS = false;
+const ENABLE_MARKER_HOVER = false;
+
 // ================================================
 // VISUAL TUNING (centralized to avoid magic numbers)
 // ================================================
@@ -644,6 +648,7 @@ function animateCameraToDefault() {
 
 // Open album handler
 function openAlbum(album) {
+    if (!ENABLE_ALBUMS) return;
     if (activeAlbum === album) return;
 
     // Close previous album if any
@@ -699,6 +704,7 @@ function updateCameraTransition(deltaTime) {
 
 // Initialize albums from photo locations
 function initializeAlbums(dataList) {
+    if (!ENABLE_ALBUMS) return;
     dataList.forEach((cityData) => {
         if (cityData.photos && cityData.photos.length > 0) {
             const surfacePos = latLonToVector3(cityData.lat, cityData.lon, CONFIG.radius * 1.15);
@@ -797,11 +803,24 @@ function getAuthToken() {
     return localStorage.getItem('auth_token');
 }
 
+function buildApiUrl(path) {
+    const base = getApiBase().replace(/\/$/, '');
+    if (base.startsWith('http')) {
+        return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+    }
+    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+function buildPhotoProxyUrl(photoId, authToken) {
+    if (!photoId || !authToken) return null;
+    const encoded = encodeURIComponent(authToken);
+    return buildApiUrl(`/photos/${photoId}/original?auth_token=${encoded}`);
+}
+
 async function loadPhotoAlbumsFromApi() {
     const token = getAuthToken();
     if (!token) return [];
-    const apiBase = getApiBase();
-    const res = await fetch(`${apiBase}/photos/map`, {
+    const res = await fetch(buildApiUrl('/photos/map'), {
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -827,7 +846,7 @@ async function loadPhotoAlbumsFromApi() {
             });
         }
         const entry = groups.get(key);
-        const url = photo.thumbnail_url || photo.original_url;
+        const url = buildPhotoProxyUrl(photo.id, token) || photo.thumbnail_url || photo.original_url;
         if (!url) return;
         entry.photos.push({
             id: photo.id,
@@ -1105,6 +1124,7 @@ function createStarField() {
             }
         `,
         fragmentShader: `
+            uniform float uTime;
             varying float vViewDot;
             varying float vEdge;
             varying float vSeed;
@@ -1155,6 +1175,7 @@ function createStarField() {
             }
         `,
         fragmentShader: `
+            uniform float uTime;
             varying float vViewDot;
             varying float vSeed;
 
@@ -1520,70 +1541,71 @@ const hoverThumbnails = document.getElementById('hover-thumbnails');
 
 // Store current hovered city for click handling
 let currentHoveredCity = null;
+const pinnedPanels = new Map();
 
-function showHoverPanel(cityData, screenX, screenY) {
-    if (!hoverPanel) return;
+function populatePanel(panel, cityData) {
+    if (!panel) return;
+    const cityEl = panel.querySelector('.hover-city');
+    const countryEl = panel.querySelector('.hover-country');
+    const mainPhotoEl = panel.querySelector('.hover-main-photo');
+    const flagEl = panel.querySelector('.hover-flag');
+    const countEl = panel.querySelector('.hover-photo-count');
+    const thumbsEl = panel.querySelector('.hover-thumbnails');
 
-    currentHoveredCity = cityData;
+    if (cityEl) cityEl.textContent = cityData.city;
+    if (countryEl) countryEl.textContent = cityData.country;
 
-    // Set city and country
-    hoverCity.textContent = cityData.city;
-    hoverCountry.textContent = cityData.country;
-
-    // Photo count
     const photoCount = cityData.photos ? cityData.photos.length : 0;
-    hoverPhotoCount.textContent = `${photoCount} photo${photoCount !== 1 ? 's' : ''}`;
+    if (countEl) countEl.textContent = `${photoCount} photo${photoCount !== 1 ? 's' : ''}`;
 
-    // Load main photo (first photo)
-    if (cityData.photos && cityData.photos.length > 0) {
-        const mainPhotoUrl = cityData.photos[0].url || cityData.photos[0];
-        hoverMainPhoto.src = mainPhotoUrl;
-        hoverMainPhoto.onload = () => hoverMainPhoto.classList.add('loaded');
-        hoverMainPhoto.onerror = () => hoverMainPhoto.classList.remove('loaded');
-    } else {
-        hoverMainPhoto.classList.remove('loaded');
+    if (mainPhotoEl) {
+        if (cityData.photos && cityData.photos.length > 0) {
+            const mainPhotoUrl = cityData.photos[0].url || cityData.photos[0];
+            mainPhotoEl.src = mainPhotoUrl;
+            mainPhotoEl.onload = () => mainPhotoEl.classList.add('loaded');
+            mainPhotoEl.onerror = () => mainPhotoEl.classList.remove('loaded');
+        } else {
+            mainPhotoEl.classList.remove('loaded');
+        }
     }
 
-    // Load flag if available (using country code)
-    if (cityData.countryCode) {
-        hoverFlag.src = `https://flagcdn.com/w40/${cityData.countryCode.toLowerCase()}.png`;
-        hoverFlag.onload = () => hoverFlag.classList.add('loaded');
-        hoverFlag.onerror = () => hoverFlag.classList.remove('loaded');
-    } else {
-        hoverFlag.classList.remove('loaded');
+    if (flagEl) {
+        if (cityData.countryCode) {
+            flagEl.src = `https://flagcdn.com/w40/${cityData.countryCode.toLowerCase()}.png`;
+            flagEl.onload = () => flagEl.classList.add('loaded');
+            flagEl.onerror = () => flagEl.classList.remove('loaded');
+        } else {
+            flagEl.classList.remove('loaded');
+        }
     }
 
-    // Create photo thumbnails (show up to 5)
-    hoverThumbnails.innerHTML = '';
-    const maxThumbs = Math.min(5, photoCount);
-
-    for (let i = 0; i < maxThumbs; i++) {
-        const photo = cityData.photos[i];
-        const photoUrl = photo.url || photo;
-
-        const thumb = document.createElement('div');
-        thumb.className = 'hover-thumb';
-        thumb.style.animationDelay = `${i * 0.05}s`;
-
-        const img = document.createElement('img');
-        img.src = photoUrl;
-        img.alt = photo.title || `Photo ${i + 1}`;
-        img.onerror = () => {
-            // Replace with placeholder on error
-            thumb.innerHTML = '<div class="hover-thumb-placeholder">📷</div>';
-        };
-
-        thumb.appendChild(img);
-        hoverThumbnails.appendChild(thumb);
+    if (thumbsEl) {
+        thumbsEl.innerHTML = '';
+        const maxThumbs = Math.min(5, photoCount);
+        for (let i = 0; i < maxThumbs; i++) {
+            const photo = cityData.photos[i];
+            const photoUrl = photo.url || photo;
+            const thumb = document.createElement('div');
+            thumb.className = 'hover-thumb';
+            thumb.style.animationDelay = `${i * 0.05}s`;
+            const img = document.createElement('img');
+            img.src = photoUrl;
+            img.alt = photo.title || `Photo ${i + 1}`;
+            img.onerror = () => {
+                thumb.innerHTML = '<div class="hover-thumb-placeholder">📷</div>';
+            };
+            thumb.appendChild(img);
+            thumbsEl.appendChild(thumb);
+        }
     }
+}
 
-    // Position panel (ensure it stays on screen)
+function positionPanel(panel, screenX, screenY) {
     const panelWidth = 300;
     const panelHeight = 280;
     let posX = screenX + 25;
     let posY = screenY - panelHeight / 2;
 
-    // Keep within viewport
     if (posX + panelWidth > window.innerWidth) {
         posX = screenX - panelWidth - 25;
     }
@@ -1592,8 +1614,39 @@ function showHoverPanel(cityData, screenX, screenY) {
         posY = window.innerHeight - panelHeight - 10;
     }
 
-    hoverPanel.style.left = `${posX}px`;
-    hoverPanel.style.top = `${posY}px`;
+    panel.style.left = `${posX}px`;
+    panel.style.top = `${posY}px`;
+}
+
+function scalePanel(panel, worldPos, facingDotOverride) {
+    if (!panel || !worldPos) return;
+    const cameraFromOrigin = camera.position.clone().normalize();
+    const markerFromOrigin = worldPos.clone().normalize();
+    const facingDot = typeof facingDotOverride === "number"
+        ? facingDotOverride
+        : cameraFromOrigin.dot(markerFromOrigin);
+
+    if (facingDot <= 0.0) {
+        panel.style.opacity = "0";
+        panel.style.pointerEvents = "none";
+        return;
+    }
+
+    const minScale = 0.6;
+    const maxScale = 1.0;
+    const scale = minScale + (maxScale - minScale) * Math.pow(Math.abs(facingDot), 0.7);
+
+    panel.style.opacity = "1";
+    panel.style.pointerEvents = "auto";
+    panel.style.transform = `translateY(0) scale(${scale})`;
+    panel.style.transformOrigin = "top left";
+}
+
+function showHoverPanel(cityData, screenX, screenY) {
+    if (!hoverPanel) return;
+    currentHoveredCity = cityData;
+    populatePanel(hoverPanel, cityData);
+    positionPanel(hoverPanel, screenX, screenY);
     hoverPanel.classList.add('visible');
 }
 
@@ -1627,6 +1680,7 @@ function getRaycastTargets() {
 }
 
 function onMouseMove(event) {
+    if (!ENABLE_MARKER_HOVER) return;
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -1706,7 +1760,6 @@ window.addEventListener('mousemove', onMouseMove);
 function onMarkerClick(event) {
     if (state === 'INTRO') return;
 
-    // If an album is already open, clicking anywhere closes it
     if (isAlbumOpen) {
         closeAlbum();
         return;
@@ -1729,10 +1782,24 @@ function onMarkerClick(event) {
         const parentGroup = hit.userData.parentGroup;
         if (parentGroup) {
             const cityData = parentGroup.userData;
-            const album = albums.find(a => a.data.city === cityData.city);
-            if (album) {
-                hideHoverPanel();
-                openAlbum(album);
+            const key = `${cityData.city}|${cityData.country}|${cityData.lat}|${cityData.lon}`;
+            if (!pinnedPanels.has(key)) {
+                const panel = hoverPanel ? hoverPanel.cloneNode(true) : null;
+                if (panel) {
+                    panel.classList.add('visible', 'hover-panel--pinned');
+                    panel.removeAttribute('id');
+                    panel.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+                    populatePanel(panel, cityData);
+                    positionPanel(panel, event.clientX, event.clientY);
+                    const container = document.querySelector('.earth-view') || document.body;
+                    container.appendChild(panel);
+                    pinnedPanels.set(key, { panel, group: parentGroup, cityData });
+                }
+            } else {
+                const entry = pinnedPanels.get(key);
+                if (entry?.panel) {
+                    positionPanel(entry.panel, event.clientX, event.clientY);
+                }
             }
         }
     }
@@ -1929,6 +1996,22 @@ function animate() {
 
     // Update all albums (billboard effect)
     albums.forEach(album => album.update(camera));
+
+    // Update pinned panels to follow markers
+    pinnedPanels.forEach(({ panel, group }) => {
+        if (!panel || !group) return;
+        const worldPos = new THREE.Vector3();
+        group.getWorldPosition(worldPos);
+        const cameraFromOrigin = camera.position.clone().normalize();
+        const markerFromOrigin = worldPos.clone().normalize();
+        const facingDot = cameraFromOrigin.dot(markerFromOrigin);
+        const anchorPos = facingDot < 0 ? worldPos.clone().multiplyScalar(-1) : worldPos;
+        const screenPos = anchorPos.project(camera);
+        const screenX = (screenPos.x + 1) / 2 * window.innerWidth;
+        const screenY = -(screenPos.y - 1) / 2 * window.innerHeight;
+        positionPanel(panel, screenX, screenY);
+        scalePanel(panel, worldPos, facingDot);
+    });
 
     controls.update();
     renderer.render(scene, camera);
