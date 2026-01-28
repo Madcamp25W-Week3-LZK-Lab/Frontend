@@ -109,7 +109,7 @@ body {
 
 .floating-fab {
   position: fixed;
-  top: calc(var(--panel-inset) + var(--panel-header-offset));
+  top: 16px;
   width: 48px;
   height: 48px;
   border-radius: 14px;
