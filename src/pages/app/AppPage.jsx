@@ -1272,6 +1272,7 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const progressTimersRef = useRef([]);
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
@@ -1279,16 +1280,34 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
     setMessages((prev) => [...prev, { role: "user", text: prompt }]);
     setInput("");
     setIsSending(true);
+    const progressId = `progress-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const stages = ["사용자 입력 분석 중", "모델 선정 중", "사진 분석 중"];
     setMessages((prev) => [
       ...prev,
-      { role: "assistant", text: "해당 설명에 맞는 사진을 찾고 있습니다..." },
+      { role: "assistant", text: stages[0], kind: "progress", stageIndex: 0, progressId },
     ]);
+    const timers = [];
+    timers.push(setTimeout(() => {
+      setMessages((prev) => prev.map((msg) => (
+        msg.progressId === progressId
+          ? { ...msg, text: stages[1], stageIndex: 1 }
+          : msg
+      )));
+    }, 2000));
+    timers.push(setTimeout(() => {
+      setMessages((prev) => prev.map((msg) => (
+        msg.progressId === progressId
+          ? { ...msg, text: stages[2], stageIndex: 2 }
+          : msg
+      )));
+    }, 4000));
+    progressTimersRef.current.push(...timers);
 
     try {
       const result = await onPrompt?.(prompt);
       if (result?.count !== undefined) {
         setMessages((prev) => [
-          ...prev,
+          ...prev.filter((msg) => msg.progressId !== progressId),
           {
             role: "assistant",
             text: `"${result.label}" 결과 ${result.count}장 발견되었습니다.`,
@@ -1298,10 +1317,12 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
       }
     } catch (error) {
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((msg) => msg.progressId !== progressId),
         { role: "assistant", text: error?.message || "AI 검색에 실패했습니다." },
       ]);
     } finally {
+      progressTimersRef.current.forEach((timer) => clearTimeout(timer));
+      progressTimersRef.current = [];
       setIsSending(false);
     }
   };
@@ -1339,8 +1360,18 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
               </div>
             )}
             {messages.map((msg, i) => (
-              <div key={i} className={`chat-message chat-message--${msg.role}`}>
-                {msg.text}
+              <div
+                key={i}
+                className={`chat-message chat-message--${msg.role} ${msg.kind === "progress" ? "chat-message--progress" : ""}`}
+              >
+                <span className="chat-message-text">{msg.text}</span>
+                {msg.kind === "progress" && (
+                  <span className="chat-loading-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                )}
                 {msg.photos?.length > 0 && (
                   <div className="chat-photo-grid">
                     {msg.photos.map((photo) => (
