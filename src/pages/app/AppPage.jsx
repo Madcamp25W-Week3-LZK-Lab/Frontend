@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Send, MessageSquare, LayoutGrid, Layers } from "lucide-react";
+import { Box, User, MapPin, Sparkles, Search, Plus, PanelLeftClose, PanelLeft, PanelRightClose, PanelRight, Eye, EyeOff, Check, Send, MessageSquare, LayoutGrid, Layers } from "lucide-react";
 import { aiApi, boardApi, driveApi, photosApi, promptsApi, tagsApi } from "../../lib/api";
 import OnboardingOverlay from "../onboarding/OnboardingOverlay.jsx";
 import PlaceView from "./PlaceView.jsx";
+import iosRefreshIcon from "../../assets/icons/ios_refresh.svg";
 
 const CATEGORY_ICONS = {
   object: Box,
@@ -952,6 +953,11 @@ const CategoryPanel = ({
   const [editingId, setEditingId] = useState(null);
   const [editingValue, setEditingValue] = useState("");
 
+  const resolveItemIcon = (item) => {
+    if (item?.kind === "custom") return Sparkles;
+    return CATEGORY_ICONS[item?.type] || Sparkles;
+  };
+
   const handleStartEdit = (item) => {
     setEditingId(item.id);
     setEditingValue(item.label);
@@ -1014,6 +1020,7 @@ const CategoryPanel = ({
                 <ul className="category-list">
                   {filterItems(pinnedItems).map((item) => {
                     const isChecked = checkedItems.includes(item.id);
+                    const ItemIcon = resolveItemIcon(item);
                     return (
                       <li
                         key={item.id}
@@ -1030,19 +1037,24 @@ const CategoryPanel = ({
                             autoFocus
                           />
                         ) : (
-                          <span
-                            className="category-item-label"
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              handleStartEdit(item);
-                            }}
-                          >
-                            {item.label}
-                          </span>
+                          <>
+                            <span className="category-item-icon">
+                              <ItemIcon size={14} />
+                            </span>
+                            <span
+                              className="category-item-label"
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEdit(item);
+                              }}
+                            >
+                              {item.label}
+                            </span>
+                          </>
                         )}
                         <span className="category-item-count">{item.count}장</span>
-                        <span className="category-item-toggle">
-                          {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                        <span className={`category-item-check ${isChecked ? "is-visible" : ""}`}>
+                          <Check size={14} />
                         </span>
                       </li>
                     );
@@ -1064,6 +1076,7 @@ const CategoryPanel = ({
                       <>
                         {filterItems(group.countries).map((countryItem) => {
                           const isChecked = checkedItems.includes(countryItem.id);
+                          const ItemIcon = resolveItemIcon(countryItem);
                           return (
                             <li
                               key={countryItem.id}
@@ -1083,19 +1096,24 @@ const CategoryPanel = ({
                                   autoFocus
                                 />
                               ) : (
-                                <span
-                                  className="category-item-label"
-                                  onDoubleClick={(e) => {
-                                    e.stopPropagation();
-                                    handleStartEdit(countryItem);
-                                  }}
-                                >
-                                  {countryItem.label}
-                                </span>
+                                <>
+                                  <span className="category-item-icon">
+                                    <ItemIcon size={14} />
+                                  </span>
+                                  <span
+                                    className="category-item-label"
+                                    onDoubleClick={(e) => {
+                                      e.stopPropagation();
+                                      handleStartEdit(countryItem);
+                                    }}
+                                  >
+                                    {countryItem.label}
+                                  </span>
+                                </>
                               )}
                               <span className="category-item-count">{countryItem.count}장</span>
-                              <span className="category-item-toggle">
-                                {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                              <span className={`category-item-check ${isChecked ? "is-visible" : ""}`}>
+                                <Check size={14} />
                               </span>
                             </li>
                           );
@@ -1108,6 +1126,7 @@ const CategoryPanel = ({
                           .flatMap(([country, cities]) => filterItems(cities))
                           .map((item) => {
                             const isChecked = checkedItems.includes(item.id);
+                            const ItemIcon = resolveItemIcon(item);
                             return (
                               <li
                                 key={item.id}
@@ -1128,19 +1147,24 @@ const CategoryPanel = ({
                                     autoFocus
                                   />
                                 ) : (
-                                  <span
-                                    className="category-item-label"
-                                    onDoubleClick={(e) => {
-                                      e.stopPropagation();
-                                      handleStartEdit(item);
-                                    }}
-                                  >
-                                    {item.label}
-                                  </span>
+                                  <>
+                                    <span className="category-item-icon">
+                                      <ItemIcon size={14} />
+                                    </span>
+                                    <span
+                                      className="category-item-label"
+                                      onDoubleClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStartEdit(item);
+                                      }}
+                                    >
+                                      {item.label}
+                                    </span>
+                                  </>
                                 )}
                                 <span className="category-item-count">{item.count}장</span>
-                                <span className="category-item-toggle">
-                                  {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                                <span className={`category-item-check ${isChecked ? "is-visible" : ""}`}>
+                                  <Check size={14} />
                                 </span>
                               </li>
                             );
@@ -1150,6 +1174,7 @@ const CategoryPanel = ({
                       filterItems(group.items).map((item) => {
                         const isChecked = checkedItems.includes(item.id);
                         const isLocationCity = item.subkind === "city";
+                        const ItemIcon = resolveItemIcon(item);
                         return (
                           <li
                             key={item.id}
@@ -1170,19 +1195,24 @@ const CategoryPanel = ({
                                 autoFocus
                               />
                             ) : (
-                              <span
-                                className="category-item-label"
-                                onDoubleClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStartEdit(item);
-                                }}
-                              >
-                                {item.label}
-                              </span>
+                              <>
+                                <span className="category-item-icon">
+                                  <ItemIcon size={14} />
+                                </span>
+                                <span
+                                  className="category-item-label"
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartEdit(item);
+                                  }}
+                                >
+                                  {item.label}
+                                </span>
+                              </>
                             )}
                             <span className="category-item-count">{item.count}장</span>
-                            <span className="category-item-toggle">
-                              {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                            <span className={`category-item-check ${isChecked ? "is-visible" : ""}`}>
+                              <Check size={14} />
                             </span>
                           </li>
                         );
@@ -1203,6 +1233,7 @@ const CategoryPanel = ({
                 <ul className="category-list">
                   {filterItems(customCategories).map((item) => {
                     const isChecked = checkedItems.includes(item.id);
+                    const ItemIcon = resolveItemIcon(item);
                     return (
                       <li
                         key={item.id}
@@ -1219,15 +1250,20 @@ const CategoryPanel = ({
                             autoFocus
                           />
                         ) : (
-                          <span
-                            className="category-item-label"
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              handleStartEdit(item);
-                            }}
-                          >
-                            {item.label}
-                          </span>
+                          <>
+                            <span className="category-item-icon">
+                              <ItemIcon size={14} />
+                            </span>
+                            <span
+                              className="category-item-label"
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                handleStartEdit(item);
+                              }}
+                            >
+                              {item.label}
+                            </span>
+                          </>
                         )}
                         <span className="category-item-count">{item.count}장</span>
                         <button
@@ -1239,8 +1275,8 @@ const CategoryPanel = ({
                         >
                           ✕
                         </button>
-                        <span className="category-item-toggle">
-                          {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                        <span className={`category-item-check ${isChecked ? "is-visible" : ""}`}>
+                          <Check size={14} />
                         </span>
                       </li>
                     );
@@ -1273,6 +1309,11 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const progressTimersRef = useRef([]);
+  const exampleQueries = [
+    "바닷가에서 찍은 사진",
+    "노을 배경 인물",
+    "검은 고양이",
+  ];
 
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
@@ -1356,7 +1397,19 @@ const ChatPanel = ({ isOpen, onToggle, onPrompt, onPhotoClick }) => {
                   <MessageSquare size={32} />
                 </div>
                 <p className="chat-empty-title">AI 사진 검색</p>
-                <p className="chat-empty-desc">찾고 싶은 사진을 자연어로 설명해보세요</p>
+                <p className="chat-empty-desc">찾고 싶은 사진을 자연어로 설명해보세요.</p>
+                <div className="chat-empty-chips">
+                  {exampleQueries.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="chat-empty-chip"
+                      onClick={() => setInput(label)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {messages.map((msg, i) => (
@@ -1429,7 +1482,11 @@ const DriveImportModal = ({
   importTotal = 0,
 }) => {
   if (!isOpen) return null;
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
   const isComplete = Boolean(driveImported && importTotal > 0);
+  const selectedFolderLabel = selectedFolderId
+    ? (folders.find((folder) => folder.id === selectedFolderId)?.path || folders.find((folder) => folder.id === selectedFolderId)?.name || "선택됨")
+    : "전체";
   const handlePrimary = () => {
     if (isComplete) {
       onProceed?.();
@@ -1457,7 +1514,10 @@ const DriveImportModal = ({
         animate={{ scale: 1, opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h3>{isComplete ? "Google Drive 연동 완료" : "Google Drive 연동"}</h3>
+        <div className="drive-modal-header">
+          <h3>{isComplete ? "Google Drive 연동 완료" : "Google Drive 연동"}</h3>
+          <button className="drive-modal-close-x" onClick={onClose} aria-label="닫기">✕</button>
+        </div>
         <p className="drive-modal-desc">
           {isComplete
             ? "사진을 성공적으로 불러왔어요."
@@ -1466,32 +1526,52 @@ const DriveImportModal = ({
 
         {!isComplete && accessToken && (
           <>
-            <div className="drive-modal-row">
-              <label htmlFor="drive-folder">폴더</label>
-              <select
-                id="drive-folder"
-                value={selectedFolderId}
-                onChange={(e) => onSelectFolder(e.target.value)}
-              >
-                <option value="">전체</option>
-                {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
-                    {folder.path || `${"—".repeat(folder.depth || 0)} ${folder.name}`}
-                  </option>
-                ))}
-              </select>
-              <button className="drive-modal-refresh" onClick={onRefreshFolders} disabled={isBusy}>
-                새로고침
-              </button>
+            <div className="drive-modal-section">
+              <div className="drive-modal-section-title">폴더</div>
+              <div className="drive-modal-list">
+                <button
+                  type="button"
+                  className="drive-modal-row-btn"
+                  onClick={() => setShowFolderPicker(true)}
+                >
+                  <span className="drive-modal-row-label">폴더 선택</span>
+                  <span className="drive-modal-row-value">{selectedFolderLabel}</span>
+                  <span className="drive-modal-chevron">›</span>
+                </button>
+                <button
+                  type="button"
+                  className="drive-modal-row-btn drive-modal-row-btn--action"
+                  onClick={() => {
+                    if (!isBusy) {
+                      onRefreshFolders?.();
+                    }
+                  }}
+                  aria-disabled={isBusy}
+                >
+                  <span className="drive-modal-row-label">폴더 새로고침</span>
+                  <span className="drive-modal-row-icon" aria-hidden="true">
+                    <img src={iosRefreshIcon} alt="" />
+                  </span>
+                </button>
+              </div>
             </div>
-            <label className="drive-modal-checkbox">
-              <input
-                type="checkbox"
-                checked={includeSubfolders}
-                onChange={(e) => onToggleIncludeSubfolders?.(e.target.checked)}
-              />
-              하위 폴더 포함
-            </label>
+            <div className="drive-modal-section">
+              <div className="drive-modal-section-title">옵션</div>
+              <div className="drive-modal-list">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={includeSubfolders}
+                  className="drive-modal-row-btn drive-modal-row-btn--switch"
+                  onClick={() => onToggleIncludeSubfolders?.(!includeSubfolders)}
+                >
+                  <span className="drive-modal-row-label">하위 폴더 포함</span>
+                  <span className={`drive-modal-switch ${includeSubfolders ? "is-on" : ""}`}>
+                    <span className="drive-modal-switch-thumb" />
+                  </span>
+                </button>
+              </div>
+            </div>
           </>
         )}
 
@@ -1518,31 +1598,70 @@ const DriveImportModal = ({
           <p className="drive-modal-summary">사진 {importTotal}장 불러옴 · 모두 보기</p>
         )}
 
-        <button className="drive-modal-btn" onClick={handlePrimary} disabled={isBusy}>
-          {isBusy ? "Google Drive를 불러오는 중..." : isComplete ? "다음" : "Google Drive 연결하기"}
-        </button>
-
-        {isComplete && (
-          <button className="drive-modal-link" onClick={onRequestToken} disabled={isBusy}>
-            다른 계정으로 다시 연결
+        <div className="drive-modal-footer">
+          <button
+            className={`drive-modal-btn ${isBusy ? "is-loading is-disabled" : ""}`}
+            onClick={handlePrimary}
+            disabled={isBusy}
+          >
+            {isBusy && <span className="drive-modal-btn-spinner" aria-hidden="true" />}
+            <span>{isBusy ? "Google Drive를 불러오는 중..." : isComplete ? "다음" : "Google Drive 연결하기"}</span>
           </button>
-        )}
+          {isComplete && (
+            <button className="drive-modal-link" onClick={onRequestToken} disabled={isBusy}>
+              다른 계정으로 다시 연결
+            </button>
+          )}
+          {!isComplete && (
+            <button className="drive-modal-link" onClick={onClose}>
+              취소
+            </button>
+          )}
+        </div>
 
         {error && <p className="auth-error">{error}</p>}
-        {!isComplete && (
-          <button className="drive-modal-close" onClick={onClose}>
-            닫기
-          </button>
-        )}
       </motion.div>
+      {showFolderPicker && (
+        <div className="drive-picker-overlay" onClick={() => setShowFolderPicker(false)}>
+          <div className="drive-picker-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="drive-picker-header">
+              <span>폴더 선택</span>
+              <button className="drive-picker-done" onClick={() => setShowFolderPicker(false)}>
+                완료
+              </button>
+            </div>
+            <div className="drive-picker-list">
+              <button
+                type="button"
+                className={`drive-picker-row ${selectedFolderId === "" ? "is-selected" : ""}`}
+                onClick={() => onSelectFolder("")}
+              >
+                전체
+                <span className="drive-picker-check">✓</span>
+              </button>
+              {folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  type="button"
+                  className={`drive-picker-row ${selectedFolderId === folder.id ? "is-selected" : ""}`}
+                  onClick={() => onSelectFolder(folder.id)}
+                >
+                  {folder.path || `${"—".repeat(folder.depth || 0)} ${folder.name}`}
+                  <span className="drive-picker-check">✓</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };
 
 // Main App Component
 export default function App({ onBack }) {
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [leftPanelOpen, setLeftPanelOpen] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [checkedItems, setCheckedItems] = useState([]);
   const [stacks, setStacks] = useState([]);
   const [intersectionStacks, setIntersectionStacks] = useState([]);
@@ -2594,30 +2713,7 @@ export default function App({ onBack }) {
   );
 
   return (
-    <div
-      className={[
-        "app-layout",
-        leftPanelOpen ? "app-layout--left-open" : "",
-        rightPanelOpen ? "app-layout--right-open" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <CategoryPanel
-        isOpen={leftPanelOpen}
-        onToggle={() => setLeftPanelOpen(!leftPanelOpen)}
-        checkedItems={checkedItems}
-        onItemToggle={handleItemToggle}
-        categories={categories}
-        pinnedItems={pinnedItems}
-        customCategories={customCategoryItems}
-        onNewCategory={() => setShowNewCategoryModal(true)}
-        onDriveImport={() => setShowDriveModal(true)}
-        onRenameTag={handleRenameTag}
-        onRenameCustom={handleRenameCustomAlbum}
-        onDeleteCustom={handleDeleteCustomAlbum}
-      />
-
+    <div className="app-layout">
       <main className="workspace" ref={workspaceRef}>
         {loadError && (
           <div className="workspace-error">
@@ -2690,11 +2786,12 @@ export default function App({ onBack }) {
           </div>
             <div className="view-mode-actions">
               <button
-                className="toolbar-action-btn toolbar-action-btn--ghost"
+                className="toolbar-action-btn toolbar-action-btn--icon"
                 onClick={() => setShowDetectionBoxes((prev) => !prev)}
                 type="button"
+                title={showDetectionBoxes ? "박스 숨기기" : "박스 보기"}
               >
-                {showDetectionBoxes ? "박스 숨기기" : "박스 보기"}
+                {showDetectionBoxes ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
               {viewMode === 'canvas' && (
                 <motion.button
@@ -2749,12 +2846,77 @@ export default function App({ onBack }) {
         </AnimatePresence>
       </main>
 
-      <ChatPanel
-        isOpen={rightPanelOpen}
-        onToggle={() => setRightPanelOpen(!rightPanelOpen)}
-        onPrompt={handleCreatePromptAlbum}
-        onPhotoClick={setViewerPhoto}
-      />
+      <div
+        className={[
+          "floating-panel",
+          "floating-panel--left",
+          leftPanelOpen ? "floating-panel--open" : "",
+        ].filter(Boolean).join(" ")}
+      >
+        {leftPanelOpen && (
+          <div
+            className="floating-panel-backdrop"
+            onClick={() => setLeftPanelOpen(false)}
+          />
+        )}
+        <div className="floating-panel-sheet">
+          <CategoryPanel
+            isOpen={leftPanelOpen}
+            onToggle={() => setLeftPanelOpen(!leftPanelOpen)}
+            checkedItems={checkedItems}
+            onItemToggle={handleItemToggle}
+            categories={categories}
+            pinnedItems={pinnedItems}
+            customCategories={customCategoryItems}
+            onNewCategory={() => setShowNewCategoryModal(true)}
+            onDriveImport={() => setShowDriveModal(true)}
+            onRenameTag={handleRenameTag}
+            onRenameCustom={handleRenameCustomAlbum}
+            onDeleteCustom={handleDeleteCustomAlbum}
+          />
+        </div>
+      </div>
+
+      <div
+        className={[
+          "floating-panel",
+          "floating-panel--right",
+          rightPanelOpen ? "floating-panel--open" : "",
+        ].filter(Boolean).join(" ")}
+      >
+        {rightPanelOpen && (
+          <div
+            className="floating-panel-backdrop"
+            onClick={() => setRightPanelOpen(false)}
+          />
+        )}
+        <div className="floating-panel-sheet">
+          <ChatPanel
+            isOpen={rightPanelOpen}
+            onToggle={() => setRightPanelOpen(!rightPanelOpen)}
+            onPrompt={handleCreatePromptAlbum}
+            onPhotoClick={setViewerPhoto}
+          />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className={`floating-fab floating-fab--left ${leftPanelOpen ? "floating-fab--hidden" : ""}`}
+        onClick={() => setLeftPanelOpen((prev) => !prev)}
+        aria-label="카테고리 패널 열기"
+      >
+        <PanelLeft size={18} />
+      </button>
+
+      <button
+        type="button"
+        className={`floating-fab floating-fab--right ${rightPanelOpen ? "floating-fab--hidden" : ""}`}
+        onClick={() => setRightPanelOpen((prev) => !prev)}
+        aria-label="AI 패널 열기"
+      >
+        <PanelRight size={18} />
+      </button>
 
       {/* Photo Viewer Lightbox */}
       <AnimatePresence>

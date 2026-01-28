@@ -2,6 +2,46 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import "../../styles/onboarding/OnboardingOverlay.css";
 
+const PersonCard = ({ face, onNameChange, onNameCommit, onHide, resolvePhotoUrl }) => {
+  const [localName, setLocalName] = useState(face?.displayName || "");
+
+  useEffect(() => {
+    setLocalName(face?.displayName || "");
+  }, [face?.tagName]);
+
+  return (
+    <motion.div
+      className="face-card"
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ delay: 0.08 }}
+    >
+      <div
+        className="face-photo"
+        style={{ backgroundImage: `url(${resolvePhotoUrl(face.photo)})` }}
+      />
+      <input
+        type="text"
+        placeholder="이름 입력..."
+        value={localName}
+        onChange={(e) => {
+          const nextValue = e.target.value;
+          setLocalName(nextValue);
+        }}
+        onBlur={(e) => {
+          const nextValue = e.target.value;
+          onNameChange?.(face.tagName, nextValue);
+          onNameCommit?.(face.tagName, nextValue);
+        }}
+        className="face-input"
+      />
+      <button className="face-hide" onClick={() => onHide?.(face.tagName)}>
+        숨기기
+      </button>
+    </motion.div>
+  );
+};
+
 export default function OnboardingOverlay({
   onComplete,
   people = [],
@@ -30,10 +70,10 @@ export default function OnboardingOverlay({
     if (step !== 1) return;
 
     const messages = [
-      "사진을 분석하는 중...",
-      "인물을 식별하는 중입니다...",
-      "객체를 분류하는 중입니다...",
-      "카테고리를 정리하는 중입니다...",
+      "사진을 분석하는 중",
+      "인물을 식별하는 중입니다",
+      "객체를 분류하는 중입니다",
+      "카테고리를 정리하는 중입니다",
     ];
 
     let index = 0;
@@ -53,7 +93,7 @@ export default function OnboardingOverlay({
       if (people.length > 0 || interests.length > 0) {
         setStep(2);
       } else {
-        setAnalysisMessage("분석 결과를 반영하는 중...");
+        setAnalysisMessage("분석 결과를 반영하는 중");
       }
     }
     if (aiStatus?.status === "error" && aiError) {
@@ -76,6 +116,19 @@ export default function OnboardingOverlay({
   const handleFaceNameChange = (tagName, nextName) => {
     setFaces((prev) =>
       prev.map((f) => (f.tagName === tagName ? { ...f, displayName: nextName } : f))
+    );
+  };
+
+  const handleFaceNameCommit = (tagName, nextValue) => {
+    const nextName = nextValue.trim();
+    if (!nextName) return;
+    const current = faces.find((f) => f.tagName === tagName);
+    if (!current || nextName === current.tagName) return;
+    onRenamePerson?.(current.tagName, nextName);
+    setFaces((prev) =>
+      prev.map((f) =>
+        f.tagName === current.tagName ? { ...f, tagName: nextName, displayName: nextName } : f
+      )
     );
   };
 
@@ -157,18 +210,16 @@ export default function OnboardingOverlay({
 
         {/* Step 1: AI Analysis */}
         {step === 1 && (
-          <div className="onboarding-step onboarding-analysis">
+          <div className="onboarding-step onboarding-analysis" role="status" aria-busy="true">
             <motion.div
-              className="breathing-logo"
+              className="analysis-brand"
               animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
               transition={{ repeat: Infinity, duration: 2 }}
             >
               Photo-X
             </motion.div>
-            <p className="analysis-message">{analysisMessage}</p>
-            <div className="analysis-dots">
-              <span /><span /><span />
-            </div>
+            <p className="analysis-title">{analysisMessage}</p>
+            <div className="analysis-spinner" aria-hidden="true" />
           </div>
         )}
 
@@ -180,41 +231,14 @@ export default function OnboardingOverlay({
 
             <div className="people-grid">
               {faces.map((face) => (
-                <motion.div
+                <PersonCard
                   key={face.tagName}
-                  className="face-card"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.08 }}
-                >
-                  <div
-                    className="face-photo"
-                    style={{ backgroundImage: `url(${resolvePhotoUrl(face.photo)})` }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="이름 입력..."
-                    value={face.displayName}
-                    onChange={(e) => handleFaceNameChange(face.tagName, e.target.value)}
-                    onBlur={(e) => {
-                      const nextName = e.target.value.trim();
-                      if (nextName && nextName !== face.tagName) {
-                        onRenamePerson?.(face.tagName, nextName);
-                        setFaces((prev) =>
-                          prev.map((f) =>
-                            f.tagName === face.tagName
-                              ? { ...f, tagName: nextName, displayName: nextName }
-                              : f
-                          )
-                        );
-                      }
-                    }}
-                    className="face-input"
-                  />
-                  <button className="face-hide" onClick={() => handleFaceHide(face.tagName)}>
-                    숨기기
-                  </button>
-                </motion.div>
+                  face={face}
+                  resolvePhotoUrl={resolvePhotoUrl}
+                  onNameChange={handleFaceNameChange}
+                  onNameCommit={handleFaceNameCommit}
+                  onHide={handleFaceHide}
+                />
               ))}
             </div>
 
@@ -226,7 +250,7 @@ export default function OnboardingOverlay({
 
         {/* Step 3: Interest Categories */}
         {step === 3 && (
-          <div className="onboarding-step onboarding-interests">
+          <div className="onboarding-step onboarding-interests interest-modal">
             <h2>관심 카테고리를 선택하세요</h2>
             <p className="onboarding-subtitle">선택한 카테고리가 사이드바에 고정됩니다</p>
 
@@ -234,7 +258,7 @@ export default function OnboardingOverlay({
               {interests.map((cat) => (
                 <motion.button
                   key={cat.id}
-                  className={`bubble ${selectedInterests.includes(cat.id) ? "bubble--active" : ""}`}
+                  className={`bubble interest-chip ${selectedInterests.includes(cat.id) ? "bubble--active interest-chip--selected" : ""}`}
                   style={{
                     fontSize: cat.count > 100 ? "16px" : cat.count > 50 ? "14px" : "13px",
                     padding: cat.count > 100 ? "12px 20px" : "10px 16px",
@@ -244,12 +268,15 @@ export default function OnboardingOverlay({
                   whileTap={{ scale: 0.95 }}
                 >
                   <span className="bubble-icon">{cat.icon}</span>
+                  {selectedInterests.includes(cat.id) && (
+                    <span className="interest-chip-check" aria-hidden="true">✓</span>
+                  )}
                   {cat.label}
                 </motion.button>
               ))}
             </div>
 
-            <button className="onboarding-next" onClick={() => setStep(4)}>
+            <button className="onboarding-next interest-submit" onClick={() => setStep(4)}>
               완료
             </button>
           </div>
@@ -257,19 +284,19 @@ export default function OnboardingOverlay({
 
         {/* Step 4: Complete */}
         {step === 4 && (
-          <motion.div className="onboarding-step onboarding-complete" initial={{ scale: 0.9 }} animate={{ scale: 1 }}>
+          <motion.div className="onboarding-step onboarding-complete complete-modal" initial={{ scale: 0.9 }} animate={{ scale: 1 }}>
             <motion.div
               className="complete-icon"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
-              ✨
+              
             </motion.div>
             <h2>설정 완료!</h2>
             <p>Photo-X가 준비되었습니다</p>
             <motion.button
-              className="onboarding-start"
+              className="onboarding-start complete-primary-button"
               onClick={handleComplete}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
