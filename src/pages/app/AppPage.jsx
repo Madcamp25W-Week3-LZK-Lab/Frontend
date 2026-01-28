@@ -1060,41 +1060,134 @@ const CategoryPanel = ({
                     {group.title}
                   </h3>
                   <ul className="category-list">
-                    {filterItems(group.items).map((item) => {
-                      const isChecked = checkedItems.includes(item.id);
-                      return (
-                        <li
-                          key={item.id}
-                          className={`category-item ${isChecked ? 'category-item--selected' : ''}`}
-                          onClick={() => onItemToggle(item.id, item.label)}
-                        >
-                          {editingId === item.id ? (
-                            <input
-                              className="category-item-input"
-                              value={editingValue}
-                              onChange={(e) => setEditingValue(e.target.value)}
-                              onBlur={() => handleCommitEdit(item)}
-                              onKeyDown={(e) => e.key === "Enter" && handleCommitEdit(item)}
-                              autoFocus
-                            />
-                          ) : (
-                            <span
-                              className="category-item-label"
-                              onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                handleStartEdit(item);
-                              }}
+                    {group.type === "location" && group.countries && group.citiesByCountry ? (
+                      <>
+                        {filterItems(group.countries).map((countryItem) => {
+                          const isChecked = checkedItems.includes(countryItem.id);
+                          return (
+                            <li
+                              key={countryItem.id}
+                              className={[
+                                "category-item",
+                                isChecked ? "category-item--selected" : "",
+                              ].filter(Boolean).join(" ")}
+                              onClick={() => onItemToggle(countryItem.id, countryItem.label)}
                             >
-                              {item.label}
+                              {editingId === countryItem.id ? (
+                                <input
+                                  className="category-item-input"
+                                  value={editingValue}
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onBlur={() => handleCommitEdit(countryItem)}
+                                  onKeyDown={(e) => e.key === "Enter" && handleCommitEdit(countryItem)}
+                                  autoFocus
+                                />
+                              ) : (
+                                <span
+                                  className="category-item-label"
+                                  onDoubleClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStartEdit(countryItem);
+                                  }}
+                                >
+                                  {countryItem.label}
+                                </span>
+                              )}
+                              <span className="category-item-count">{countryItem.count}장</span>
+                              <span className="category-item-toggle">
+                                {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                              </span>
+                            </li>
+                          );
+                        })}
+                        {Array.from(group.citiesByCountry.entries())
+                          .filter(([country]) =>
+                            group.countries.some((item) => item.name === country) || country === "기타"
+                          )
+                          .sort(([a], [b]) => a.localeCompare(b, "en", { sensitivity: "base" }))
+                          .flatMap(([country, cities]) => filterItems(cities))
+                          .map((item) => {
+                            const isChecked = checkedItems.includes(item.id);
+                            return (
+                              <li
+                                key={item.id}
+                                className={[
+                                  "category-item",
+                                  isChecked ? "category-item--selected" : "",
+                                  "category-item--location-city",
+                                ].filter(Boolean).join(" ")}
+                                onClick={() => onItemToggle(item.id, item.label)}
+                              >
+                                {editingId === item.id ? (
+                                  <input
+                                    className="category-item-input"
+                                    value={editingValue}
+                                    onChange={(e) => setEditingValue(e.target.value)}
+                                    onBlur={() => handleCommitEdit(item)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleCommitEdit(item)}
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <span
+                                    className="category-item-label"
+                                    onDoubleClick={(e) => {
+                                      e.stopPropagation();
+                                      handleStartEdit(item);
+                                    }}
+                                  >
+                                    {item.label}
+                                  </span>
+                                )}
+                                <span className="category-item-count">{item.count}장</span>
+                                <span className="category-item-toggle">
+                                  {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
+                                </span>
+                              </li>
+                            );
+                          })}
+                      </>
+                    ) : (
+                      filterItems(group.items).map((item) => {
+                        const isChecked = checkedItems.includes(item.id);
+                        const isLocationCity = item.subkind === "city";
+                        return (
+                          <li
+                            key={item.id}
+                            className={[
+                              "category-item",
+                              isChecked ? "category-item--selected" : "",
+                              isLocationCity ? "category-item--location-city" : "",
+                            ].filter(Boolean).join(" ")}
+                            onClick={() => onItemToggle(item.id, item.label)}
+                          >
+                            {editingId === item.id ? (
+                              <input
+                                className="category-item-input"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onBlur={() => handleCommitEdit(item)}
+                                onKeyDown={(e) => e.key === "Enter" && handleCommitEdit(item)}
+                                autoFocus
+                              />
+                            ) : (
+                              <span
+                                className="category-item-label"
+                                onDoubleClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStartEdit(item);
+                                }}
+                              >
+                                {item.label}
+                              </span>
+                            )}
+                            <span className="category-item-count">{item.count}장</span>
+                            <span className="category-item-toggle">
+                              {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
                             </span>
-                          )}
-                          <span className="category-item-count">{item.count}장</span>
-                          <span className="category-item-toggle">
-                            {isChecked ? <Eye size={14} /> : <EyeOff size={14} />}
-                          </span>
-                        </li>
-                      );
-                    })}
+                          </li>
+                        );
+                      })
+                    )}
                   </ul>
                 </div>
               );
@@ -1747,6 +1840,30 @@ export default function App({ onBack }) {
     return tagItems.filter((item) => pinned.has(item.name));
   }, [tagItems, boardState.pinned_tags]);
 
+  const locationMeta = useMemo(() => {
+    const countries = new Set();
+    const cityToCountry = new Map();
+    const cityCounts = new Map();
+    allPhotos.forEach((photo) => {
+      const location = photo?.location || {};
+      const country = location.country;
+      const city = location.city;
+      if (country) countries.add(country);
+      if (city && country) {
+        const key = `${city}|||${country}`;
+        cityCounts.set(key, (cityCounts.get(key) || 0) + 1);
+      }
+    });
+    cityCounts.forEach((count, key) => {
+      const [city, country] = key.split("|||");
+      const existing = cityToCountry.get(city);
+      if (!existing || count > existing.count) {
+        cityToCountry.set(city, { country, count });
+      }
+    });
+    return { countries, cityToCountry };
+  }, [allPhotos]);
+
   const categories = useMemo(() => {
     const groups = {
       object: { title: "객체", type: "object" },
@@ -1762,8 +1879,36 @@ export default function App({ onBack }) {
       const key = groups[item.type] ? item.type : "other";
       groups[key].items.push(item);
     });
+    const locationGroup = groups.location;
+    if (locationGroup) {
+      const isCountry = (name) => locationMeta.countries.has(name);
+      const sortByLabel = (a, b) => a.label.localeCompare(b.label, "en", { sensitivity: "base" });
+      const countryItems = locationGroup.items
+        .filter((item) => isCountry(item.name))
+        .sort(sortByLabel)
+        .map((item) => ({ ...item, subkind: "country" }));
+      const cityItems = locationGroup.items
+        .filter((item) => !isCountry(item.name))
+        .map((item) => {
+          const mapped = locationMeta.cityToCountry.get(item.name);
+          return { ...item, subkind: "city", country: mapped?.country || null };
+        });
+      const citiesByCountry = new Map();
+      cityItems.forEach((item) => {
+        const key = item.country || "기타";
+        const list = citiesByCountry.get(key) || [];
+        list.push(item);
+        citiesByCountry.set(key, list);
+      });
+      citiesByCountry.forEach((list, key) => {
+        citiesByCountry.set(key, list.sort(sortByLabel));
+      });
+      locationGroup.countries = countryItems;
+      locationGroup.citiesByCountry = citiesByCountry;
+      locationGroup.items = [...countryItems, ...cityItems];
+    }
     return Object.values(groups).filter((group) => group.items.length > 0);
-  }, [tagItems]);
+  }, [tagItems, locationMeta]);
 
   const filteredPhotos = useMemo(() => {
     if (checkedItems.length === 0) {

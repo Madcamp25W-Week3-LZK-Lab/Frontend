@@ -327,6 +327,10 @@ body {
   background: rgba(0, 122, 255, 0.15);
 }
 
+.category-item--location-city {
+  padding-left: 28px;
+}
+
 .category-item-label {
   font-size: 14px;
   font-weight: 500;
