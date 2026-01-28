@@ -2709,9 +2709,11 @@ export default function App({ onBack }) {
               )}
             </div>
           </div>
-          <div className="item-count">
-            {filteredPhotos.length}개의 항목
-          </div>
+          {viewMode === "grid" && (
+            <div className="item-count">
+              {filteredPhotos.length}개의 항목
+            </div>
+          )}
         </div>
 
         {/* Grid Mode: Photo Gallery */}
