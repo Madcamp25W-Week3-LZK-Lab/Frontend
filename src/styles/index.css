@@ -25,6 +25,8 @@ body {
   --ios-separator: rgba(60, 60, 67, 0.18);
   --ios-systemBackground: #f8fafc;
   --ios-secondarySystemBackground: #eef2f6;
+  --panel-inset: 22px;
+  --panel-header-offset: 20px;
 }
 
 .auth-error {
@@ -51,8 +53,9 @@ body {
 ======================================== */
 .floating-panel {
   position: fixed;
-  top: 0;
-  height: 100vh;
+  top: var(--panel-inset);
+  bottom: var(--panel-inset);
+  height: auto;
   width: clamp(280px, 24vw, 320px);
   z-index: 120;
   pointer-events: none;
@@ -60,12 +63,12 @@ body {
 }
 
 .floating-panel--left {
-  left: 0;
+  left: var(--panel-inset);
   transform: translateX(-100%);
 }
 
 .floating-panel--right {
-  right: 0;
+  right: var(--panel-inset);
   transform: translateX(100%);
 }
 
@@ -85,16 +88,20 @@ body {
   position: relative;
   z-index: 120;
   height: 100%;
-  background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-  border: 1px solid var(--ios-separator);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 22px;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   overflow: hidden;
 }
 
 .floating-fab {
   position: fixed;
-  top: 64px;
+  top: calc(var(--panel-inset) + var(--panel-header-offset));
   width: 48px;
   height: 48px;
   border-radius: 14px;
@@ -116,11 +123,11 @@ body {
 }
 
 .floating-fab--left {
-  left: 16px;
+  left: var(--panel-inset);
 }
 
 .floating-fab--right {
-  right: 16px;
+  right: var(--panel-inset);
 }
 
 /* ========================================
@@ -136,7 +143,7 @@ body {
   overflow: hidden;
   z-index: 80;
   height: 100%;
-  background: var(--ios-secondarySystemBackground);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .category-panel,
@@ -241,7 +248,7 @@ body {
   height: 100%;
   overflow: hidden;
   padding: 0;
-  background: var(--ios-secondarySystemBackground);
+  background: transparent;
 }
 
 /* ========================================
@@ -1481,6 +1488,8 @@ body {
     --right-panel-open-width: 260px;
     --left-panel-width: 52px;
     --right-panel-width: 52px;
+    --panel-inset: 16px;
+    --panel-header-offset: 16px;
   }
 
   .category-panel,
@@ -1534,6 +1543,8 @@ body {
   .app-layout {
     padding: 10px;
     gap: 10px;
+    --panel-inset: 12px;
+    --panel-header-offset: 14px;
   }
 
   .workspace {
