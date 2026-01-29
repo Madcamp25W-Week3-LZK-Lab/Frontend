@@ -226,25 +226,31 @@ export default function OnboardingOverlay({
         {/* Step 2: VIP People */}
         {step === 2 && (
           <div className="onboarding-step onboarding-people">
-            <h2>이 사람들은 누구인가요?</h2>
-            <p className="onboarding-subtitle">앨범에 자주 등장하는 인물들입니다</p>
+            <div className="onboarding-people-content">
+              <h2>이 사람들은 누구인가요?</h2>
+              <p className="onboarding-subtitle">앨범에 자주 등장하는 인물들입니다</p>
 
-            <div className="people-grid">
-              {faces.map((face) => (
-                <PersonCard
-                  key={face.tagName}
-                  face={face}
-                  resolvePhotoUrl={resolvePhotoUrl}
-                  onNameChange={handleFaceNameChange}
-                  onNameCommit={handleFaceNameCommit}
-                  onHide={handleFaceHide}
-                />
-              ))}
+              <div className="onboarding-people-scroll">
+                <div className="people-grid">
+                  {faces.map((face) => (
+                    <PersonCard
+                      key={face.tagName}
+                      face={face}
+                      resolvePhotoUrl={resolvePhotoUrl}
+                      onNameChange={handleFaceNameChange}
+                      onNameCommit={handleFaceNameCommit}
+                      onHide={handleFaceHide}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <button className="onboarding-next" onClick={() => setStep(3)}>
-              다음
-            </button>
+            <div className="onboarding-people-footer">
+              <button className="onboarding-next onboarding-next--primary" onClick={() => setStep(3)}>
+                다음
+              </button>
+            </div>
           </div>
         )}
 

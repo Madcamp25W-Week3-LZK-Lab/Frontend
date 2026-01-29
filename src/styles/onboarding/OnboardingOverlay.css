@@ -32,7 +32,8 @@
   -webkit-backdrop-filter: blur(28px) saturate(150%);
   border-radius: 24px;
   padding: 24px;
-  min-width: 360px;
+  min-width: 0;
+  width: min(420px, calc(100vw - 32px));
   max-width: 420px;
   max-height: 80vh;
   overflow: hidden;
@@ -124,7 +125,7 @@
   gap: 16px;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  flex: 1;
+  width: 100%;
   min-height: 0;
 }
 
@@ -132,8 +133,22 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
   position: relative;
+}
+
+.onboarding-people-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.onboarding-people-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 2px 8px;
 }
 
 .face-card {
@@ -147,6 +162,7 @@
   border: 1px solid rgba(60, 60, 67, 0.16);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
   cursor: pointer;
+  min-width: 0;
 }
 
 .face-photo {
@@ -165,7 +181,8 @@
 }
 
 .face-input {
-  width: 110px;
+  width: 100%;
+  max-width: 120px;
   height: 38px;
   padding: 6px 10px;
   border: 1px solid rgba(60, 60, 67, 0.2);
@@ -196,12 +213,17 @@
   color: #6b7280;
 }
 
-.onboarding-people .onboarding-next {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
-  align-self: center;
-  z-index: 2;
+.onboarding-people-footer {
+  position: relative;
+  padding: 12px 8px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(60, 60, 67, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.onboarding-next--primary {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
 }
 
 @media (max-width: 520px) {
